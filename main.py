@@ -78,23 +78,48 @@ def prompt_selection(frame, message):
                 cv2.destroyAllWindows()
                 
                 return start_point, end_point
+            
+
+def get_keypoints(grayscale_image):
+    detector = cv2.SIFT_create()
+    keypoints, descriptors = detector.detectAndCompute(grayscale_image, None)
+
+    return keypoints, descriptors
+
+
+def get_matches(descriptors1, descriptors2, threshold):
+    # match the keypoints of the two images
+    matcher = cv2.BFMatcher()
+    matches = matcher.match(descriptors1, descriptors2)
+
+    # threshold matches
+    return [m for m in matches if m.distance < threshold]
+
+
+def draw_matches(grayscale_image1, grayscale_image2, keypoints1, keypoints2, matches):
+    matched_image = cv2.drawMatches(grayscale_image1, keypoints1, grayscale_image2, keypoints2, matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+    cv2.imshow("Matches", matched_image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 still_image = get_still_image()
+grayscale_still_image = cv2.cvtColor(still_image, cv2.COLOR_RGB2GRAY)
 still_image_copy = still_image.copy()
 wrist_start, wrist_end = prompt_selection(still_image_copy, "Draw Selection Around Wrist")
-# elbow_start, elbow_end = prompt_selection(still_image_copy, "Draw Selection Around Elbow")
 
 x1, y1 = wrist_start
 x2, y2 = wrist_end
 
-wrist_crop = still_image[y1:y2, x1:x2]
+wrist_crop = grayscale_still_image[y1:y2, x1:x2]
 
-cv2.imshow('Wrist Crop', wrist_crop)
-cv2.waitKey(0)
+keypoints1, descriptors1 = get_keypoints(grayscale_still_image)
+keypoints2, descriptors2 = get_keypoints(wrist_crop)
 
+matches = get_matches(descriptors1, descriptors2, 100)
 
-
+draw_matches(grayscale_still_image, wrist_crop, keypoints1, keypoints2, matches)
 
 
 
