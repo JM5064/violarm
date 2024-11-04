@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-import random
+
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
@@ -72,14 +72,30 @@ def prompt_selection(frame, message):
         cv2.imshow(message, temp_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q') and start_point is not None and end_point is not None:
-            cv2.destroyAllWindows()
-            return start_point, end_point
-
+            if start_point[0] < end_point[0] and start_point[1] < end_point[1]:
+                # TODO
+                # only allowed to draw from top left to bottom right. add other case
+                cv2.destroyAllWindows()
+                
+                return start_point, end_point
 
 
 still_image = get_still_image()
-x, y = prompt_selection(still_image, "Draw Selection Around Wrist")
-print(x, y)
+still_image_copy = still_image.copy()
+wrist_start, wrist_end = prompt_selection(still_image_copy, "Draw Selection Around Wrist")
+# elbow_start, elbow_end = prompt_selection(still_image_copy, "Draw Selection Around Elbow")
+
+x1, y1 = wrist_start
+x2, y2 = wrist_end
+
+wrist_crop = still_image[y1:y2, x1:x2]
+
+cv2.imshow('Wrist Crop', wrist_crop)
+cv2.waitKey(0)
+
+
+
+
 
 
 cap.release()
