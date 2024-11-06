@@ -11,7 +11,6 @@ mp_draw = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
 
 
-
 def get_still_image():
     # press q when ready to draw
     while True:
@@ -111,7 +110,7 @@ def display_image(image, window_message):
             
 
 def get_keypoints(grayscale_image):
-    detector = cv2.SIFT_create()
+    detector = cv2.ORB_create()
     keypoints, descriptors = detector.detectAndCompute(grayscale_image, None)
 
     return keypoints, descriptors
@@ -151,15 +150,49 @@ def crop_image(image, top_left_point, bottom_right_point, padding):
     if y2 > height:
         y2 = height
 
-    return image[y1:y2, x1:x2]
+    return image[y1:y2, x1:x2], x1, y1
 
 
+def find_center(matches, keypoints2, threshold):
+    """Computes the center of the matched points
+    args: 
+        matches
+        keypoints2: keypoints from the matched image
+        threshold: metric to deduce inliers
+    
+    returns:
+        x, y: int, int
+    """
+    
+    # gather the matching points in the second image
+    points = []
+    for match in matches:
+        points.append(keypoints2[match.trainIdx].pt)
+
+    # calculate mean location of points
+    center = np.mean(points, axis=0)
+
+    refined_points = []
+    # recalculate distances of each point to the center and keep the inliers
+    for point in points:
+        distance = np.linalg.norm(point - center)
+        if (distance < threshold):
+            refined_points.append(point)
+
+    if len(refined_points) == 0:
+        refined_center = center
+    else:
+        refined_center = np.mean(refined_points, axis=0)
+
+    return round(refined_center[0]), round(refined_center[1])
+    
+    
 grayscale_still_image = cv2.cvtColor(still_image, cv2.COLOR_RGB2GRAY)
 
 still_image_copy = still_image.copy()
 wrist_start, wrist_end = prompt_selection(still_image_copy, "Draw Selection Around Wrist")
 
-wrist_crop = crop_image(grayscale_still_image, wrist_start, wrist_end, 0)
+wrist_crop, _, _ = crop_image(grayscale_still_image, wrist_start, wrist_end, 0)
 
 
 # get second image
@@ -167,15 +200,22 @@ still_image2 = get_still_image()
 grayscale_still_image2 = cv2.cvtColor(still_image2, cv2.COLOR_RGB2GRAY)
 
 # crop from second image
-wrist_crop_larger = crop_image(grayscale_still_image2, wrist_start, wrist_end, 150)
+padding = 500
+wrist_crop_larger, cropped_x1, cropped_y1 = crop_image(grayscale_still_image2, wrist_start, wrist_end, padding)
 
 # match first crop to second crop
-keypoints1, descriptors1 = get_keypoints(wrist_crop_larger)
-keypoints2, descriptors2 = get_keypoints(wrist_crop)
+keypoints1, descriptors1 = get_keypoints(wrist_crop)
+keypoints2, descriptors2 = get_keypoints(wrist_crop_larger)
 
-matches = get_matches(descriptors1, descriptors2, 200)
+matches = get_matches(descriptors1, descriptors2, 300)
 
-draw_matches(wrist_crop_larger, wrist_crop, keypoints1, keypoints2, matches)
+draw_matches(wrist_crop, wrist_crop_larger, keypoints1, keypoints2, matches)
+center_x, center_y = find_center(matches, keypoints2, 50)
+center_x += cropped_x1
+center_y += cropped_y1
+
+centerimage = cv2.circle(still_image2, (center_x, center_y), 5, (0, 0, 255), 10)
+display_image(centerimage, "Center")
 
 
 cap.release()
