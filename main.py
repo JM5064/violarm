@@ -110,6 +110,14 @@ def display_image(image, window_message):
             
 
 def get_keypoints(grayscale_image):
+    """Get the keypoints and descriptors of an image
+    args:
+        grayscale_image
+    
+    returns:
+        keypoints and descriptors of the image
+    """
+
     detector = cv2.ORB_create()
     keypoints, descriptors = detector.detectAndCompute(grayscale_image, None)
 
@@ -117,6 +125,15 @@ def get_keypoints(grayscale_image):
 
 
 def get_matches(descriptors1, descriptors2, threshold):
+    """Gets the matching keypoints of two images
+    args:
+        descriptors1, descriptors2: descriptors of the images
+        threshold: int metric to keep best matches
+    
+    returns:
+        list of matches
+    """
+
     # match the keypoints of the two images
     matcher = cv2.BFMatcher()
     matches = matcher.match(descriptors1, descriptors2)
@@ -132,6 +149,18 @@ def draw_matches(grayscale_image1, grayscale_image2, keypoints1, keypoints2, mat
 
 
 def crop_image(image, top_left_point, bottom_right_point, padding):
+    """Crops the image given specified points and padding
+    args:
+        image: input image to crop
+        top_left_point: top left point of the crop
+        bottom_right_point: bottom right point of the crop
+        padding: adds padding to the extend the area cropped
+
+    returns:
+        cropped image
+        x1, y1: coordinates of the top left corner of crop wrt the original image
+    """
+
     x1, y1 = top_left_point
     x2, y2 = bottom_right_point
 
@@ -141,6 +170,7 @@ def crop_image(image, top_left_point, bottom_right_point, padding):
     x2 += padding
     y2 += padding
 
+    # make sure x1, y1 are still in bounds
     if x1 < 0:
         x1 = 0
     if y1 < 0:
@@ -156,7 +186,7 @@ def crop_image(image, top_left_point, bottom_right_point, padding):
 def find_center(matches, keypoints2, threshold):
     """Computes the center of the matched points
     args: 
-        matches
+        matches: matches from image1 to image2
         keypoints2: keypoints from the matched image
         threshold: metric to deduce inliers
     
@@ -200,7 +230,7 @@ still_image2 = get_still_image()
 grayscale_still_image2 = cv2.cvtColor(still_image2, cv2.COLOR_RGB2GRAY)
 
 # crop from second image
-padding = 500
+padding = 200
 wrist_crop_larger, cropped_x1, cropped_y1 = crop_image(grayscale_still_image2, wrist_start, wrist_end, padding)
 
 # match first crop to second crop
