@@ -1,7 +1,9 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import scipy.signal
 import random
+import time
 
 
 mp_hands = mp.solutions.hands
@@ -85,12 +87,12 @@ def prompt_selection(frame, message):
                 return start_point, end_point
             
 
-def display_contours(image):
-    grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+def display_contours(image, contours):
+    # grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    edges = cv2.Canny(grayscale_image, 50, 150)
+    # edges = cv2.Canny(grayscale_image, 50, 150)
 
-    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    # contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     image_copy = image.copy()
 
@@ -216,7 +218,128 @@ def find_center(matches, keypoints2, threshold):
 
     return round(refined_center[0]), round(refined_center[1])
     
+
+def filter_small_contours(grayscale_image, size_threshold):
+    """Filters out the small contours
+    args:
+        grayscale_image: cropped grayscale image
+        size_threshold: threshold for min contour arcLength
     
+    returns:
+        large_contours: list
+    """
+
+    edges = cv2.Canny(grayscale_image, 50, 150)
+
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    # threshold only large contours
+    large_contours = []
+    for contour in contours:
+        if cv2.arcLength(contour, False) > size_threshold:
+            large_contours.append(contour)
+
+    return large_contours
+
+
+def find_corners(grayscale_image, center, contours):
+    """Finds the top corners of the bounding contours around center pixel
+    args:
+        grayscale_image: cropped grayscale image
+        center: (int, int) center pixel
+        contours: large contours to exaime
+    
+    returns:    
+        x1, y1: coordinate of top left corner
+        x2, y2: coordinate of top right corner
+    
+    """
+    
+    # create image with only contours
+    contour_image = np.zeros(grayscale_image.shape)
+    cv2.drawContours(contour_image, contours, -1, (255, 255, 255), 1)
+
+
+    laplacian = np.array([[1, 0, -2, 0, 1],
+                         [0, -2, 0, 2, 0],
+                         [-2, 0, 4, 0, -2],
+                         [0, 2, 0, -2, 0],
+                         [1, 0, -2, 0, 1]])
+
+
+    # find top left corner
+    x1, y1 = center
+    w = grayscale_image.shape[1]
+    h = grayscale_image.shape[0]
+
+
+    # find edge
+    while x1 > -1 and y1 > -1 and contour_image[y1][x1] == 0:
+        x1 -= 1
+        y1 -= 1
+
+    max_value = 0
+    max_x1, max_y1 = x1, y1
+    while x1 > -1 and y1 > -1:
+        if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
+            cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
+            convolved = scipy.signal.fftconvolve(laplacian, cropped)
+
+            if abs(convolved[3][3]) > max_value:
+                max_value = abs(convolved[3][3])
+                max_x1, max_y1 = x1, y1
+
+        if contour_image[y1-1][x1-1] == 255:
+            x1 -= 1
+            y1 -= 1
+        elif contour_image[y1+1][x1-1] == 255:
+            x1 -= 1
+            y1 += 1
+        elif contour_image[y1-1][x1] == 255:
+            y1 -= 1
+        elif contour_image[y1][x1-1] == 255:
+            x1 -= 1
+        else:
+            break
+
+    # ---------------------------------------
+    print("---------------------------------------")
+
+    # find top right corner
+    x2, y2 = center
+    while x2 < w and y2 > 0 and contour_image[y2][x2] == 0:
+        x2 += 1
+        y2 -= 1
+
+    max_value = 0
+    max_x2, max_y2 = x2, y2
+    while x2 < w and y2 > 0:
+        if x2 - 2 > -1 and y2 - 2 > -1 and x2 + 2 < w and y2 + 2 < h:
+            cropped = contour_image[y2-2:y2+3, x2-2:x2+3]
+            convolved = scipy.signal.fftconvolve(laplacian, cropped)
+
+            if abs(convolved[3][3]) > max_value:
+                max_value = abs(convolved[3][3])
+                max_x2, max_y2 = x2, y2
+
+        if contour_image[y2-1][x2+1] == 255:
+            x2 += 1
+            y2 -= 1
+        elif contour_image[y2+1][x2+1] == 255:
+            x2 += 1
+            y2 += 1
+        elif contour_image[y2-1][x2] == 255:
+            y2 -= 1
+        elif contour_image[y2][x2+1] == 255:
+            x2 += 1
+        else:
+            break
+
+
+    return max_x1, max_y1, max_x2, max_y2
+
+    
+
 grayscale_still_image = cv2.cvtColor(still_image, cv2.COLOR_RGB2GRAY)
 
 still_image_copy = still_image.copy()
@@ -241,11 +364,14 @@ matches = get_matches(descriptors1, descriptors2, 300)
 
 draw_matches(wrist_crop, wrist_crop_larger, keypoints1, keypoints2, matches)
 center_x, center_y = find_center(matches, keypoints2, 50)
-center_x += cropped_x1
-center_y += cropped_y1
+# center_x += cropped_x1
+# center_y += cropped_y1
 
-centerimage = cv2.circle(still_image2, (center_x, center_y), 5, (0, 0, 255), 10)
-display_image(centerimage, "Center")
+# centerimage = cv2.circle(still_image2, (center_x, center_y), 5, (0, 0, 255), 10)
+# display_image(centerimage, "Center")
+
+contour_image = find_corners(wrist_crop_larger, (center_x, center_y), 300)
+display_image(contour_image, "Contour image")
 
 
 cap.release()
