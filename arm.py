@@ -163,12 +163,12 @@ class Arm:
         return image[y1:y2, x1:x2], x1, y1
 
 
-    def find_center(self, matches, keypoints2, threshold):
+    def find_center(self, matches, keypoints2, distance_threshold):
         """Computes the center of the matched points
         args: 
             matches: matches from image1 to image2
             keypoints2: keypoints from the matched image
-            threshold: metric to deduce inliers
+            distance_threshold: metric to deduce inliers
         
         returns:
             x, y: int, int
@@ -186,7 +186,7 @@ class Arm:
         # recalculate distances of each point to the center and keep the inliers
         for point in points:
             distance = np.linalg.norm(point - center)
-            if (distance < threshold):
+            if (distance < distance_threshold):
                 refined_points.append(point)
 
         if len(refined_points) == 0:
@@ -207,7 +207,7 @@ class Arm:
             large_contours: list
         """
 
-        edges = cv2.Canny(grayscale_image, 50, 150)
+        edges = cv2.Canny(grayscale_image, 50, 100)
 
         contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
@@ -249,13 +249,13 @@ class Arm:
 
         # find top left corner
         x1, y1 = center
-        while x1 > -1 and y1 > -1 and contour_image[y1][x1] == 0:
+        while x1 - 1 > -1 and y1 - 1 > -1 and contour_image[y1][x1] == 0:
             x1 -= 1
             y1 -= 1
 
         max_value = 0
         max_x1, max_y1 = x1, y1
-        while x1 > -1 and y1 > -1:
+        while x1 - 1 > -1 and y1 - 1 > -1:
             if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
                 cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
                 convolved = scipy.signal.fftconvolve(laplacian, cropped)
@@ -281,13 +281,13 @@ class Arm:
 
         # find top right corner
         x2, y2 = center
-        while x2 < w and y2 > 0 and contour_image[y2][x2] == 0:
+        while x2 + 1 < w and y2 - 1 > -1 and contour_image[y2][x2] == 0:
             x2 += 1
             y2 -= 1
 
         max_value = 0
         max_x2, max_y2 = x2, y2
-        while x2 < w and y2 > 0:
+        while x2 + 1 < w and y2 - 1 > 0:
             if x2 - 2 > -1 and y2 - 2 > -1 and x2 + 2 < w and y2 + 2 < h:
                 cropped = contour_image[y2-2:y2+3, x2-2:x2+3]
                 convolved = scipy.signal.fftconvolve(laplacian, cropped)
@@ -317,31 +317,6 @@ class Arm:
         """Calculates the new start and end points for a crop based on the center of the current image
         
         """
-
-# util methods. move to main?
-def display_image(image, window_message):
-    cv2.imshow(window_message, image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows
-
-
-def draw_matches(grayscale_image1, grayscale_image2, keypoints1, keypoints2, matches):
-        matched_image = cv2.drawMatches(grayscale_image1, keypoints1, grayscale_image2, keypoints2, matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-
-        display_image(matched_image, "Matches")
-
-
-def display_contours(image, contours):
-        image_copy = image.copy()
-
-        for contour in contours:
-            color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-            cv2.drawContours(image_copy, [contour], -1, color, 2)
-
-        display_image(image_copy, "Contours")
-
-        return image_copy
-
 
 
 # still_image_copy = still_image.copy()
