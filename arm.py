@@ -258,7 +258,7 @@ class Arm:
         while x1 - 1 > -1 and y1 - 1 > -1:
             if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
                 cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
-                convolved = scipy.signal.fftconvolve(laplacian, cropped)
+                convolved = scipy.signal.convolve(laplacian, cropped)
 
                 if abs(convolved[3][3]) > max_value:
                     max_value = abs(convolved[3][3])
@@ -290,7 +290,7 @@ class Arm:
         while x2 + 1 < w and y2 - 1 > 0:
             if x2 - 2 > -1 and y2 - 2 > -1 and x2 + 2 < w and y2 + 2 < h:
                 cropped = contour_image[y2-2:y2+3, x2-2:x2+3]
-                convolved = scipy.signal.fftconvolve(laplacian, cropped)
+                convolved = scipy.signal.convolve(laplacian, cropped)
 
                 if abs(convolved[3][3]) > max_value:
                     max_value = abs(convolved[3][3])
