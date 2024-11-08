@@ -61,8 +61,13 @@ while True:
     wrist_y1 += cropped_wrist_y
     wrist_y2 += cropped_wrist_y
 
+    wrist_start, wrist_end = arm.calculate_new_start_end((wrist_center_x + cropped_wrist_x, wrist_center_y + cropped_wrist_y), padding=250)
+
+    # testing
     corner_image = cv2.circle(frame, (wrist_x1, wrist_y1), 3, (0, 0, 255), 5)
     cv2.circle(frame, (wrist_x2, wrist_y2), 3, (0, 0, 255), 5)
+
+    cv2.circle(frame, (wrist_center_x + cropped_wrist_x, wrist_center_y + cropped_wrist_y), 3, (255, 0, 0), 5)
 
 
     cv2.imshow("Frame", frame)

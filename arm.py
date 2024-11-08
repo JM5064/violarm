@@ -315,8 +315,20 @@ class Arm:
     
     def calculate_new_start_end(self, center, padding):
         """Calculates the new start and end points for a crop based on the center of the current image
-        
+        args:
+            center: (int, int) point representing the old center
+            padding: expanded area from center
+
+        returns:
+            start_point, end_point: (int, int), (int, int)
         """
+
+        x, y = center
+
+        start_point = (max(x - padding, 0), max(y - padding, 0))
+        end_point = (min(x + padding, self.width - 1), min(y + padding, self.height - 1))
+
+        return start_point, end_point
 
 
 # still_image_copy = still_image.copy()
