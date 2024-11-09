@@ -1,7 +1,7 @@
 import cv2
 import mediapipe as mp
 import arm
-import random
+import utils
 import time
 
 mp_hands = mp.solutions.hands
@@ -9,29 +9,6 @@ hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7
 mp_draw = mp.solutions.drawing_utils
 
 arm = arm.Arm()
-
-def display_image(image, window_message):
-    cv2.imshow(window_message, image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows
-
-
-def draw_matches(grayscale_image1, grayscale_image2, keypoints1, keypoints2, matches):
-        matched_image = cv2.drawMatches(grayscale_image1, keypoints1, grayscale_image2, keypoints2, matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-
-        display_image(matched_image, "Matches")
-
-
-def display_contours(image, contours):
-        image_copy = image.copy()
-
-        for contour in contours:
-            color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-            cv2.drawContours(image_copy, [contour], -1, color, 2)
-
-        display_image(image_copy, "Contours")
-
-        return image_copy
 
 
 cap = cv2.VideoCapture(0)
