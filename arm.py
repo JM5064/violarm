@@ -19,9 +19,15 @@ class Arm:
         still_image_copy = still_image.copy()
         self.wrist_start, self.wrist_end = self.prompt_selection(still_image_copy, "Draw Selection Around Wrist")
 
+        # prompt for elbow
+        still_image_copy = still_image.copy()
+        self.elbow_start, self.elbow_end = self.prompt_selection(still_image_copy, "Draw Selection Around Elbow")
+
         wrist_crop, _, _ = self.crop_image(grayscale_still_image, self.wrist_start, self.wrist_end, 0)
+        elbow_crop, _, _ = self.crop_image(grayscale_still_image, self.elbow_start, self.elbow_end, 0)
 
         self.wrist_keypoints, self.wrist_descriptors = self.get_keypoints(wrist_crop)
+        self.elbow_keypoints, self.elbow_descriptors = self.get_keypoints(elbow_crop)
 
         print("Initialized Arm Model")
 
@@ -245,10 +251,10 @@ class Arm:
                             [1, 0, -2, 0, 1]])
 
         # get top left corner
-        max_x1, max_y1 = self.find_corner(contour_image, center, laplacian, -1, 1)
+        max_x1, max_y1 = self.find_corner(contour_image, center, laplacian, -1, -1)
 
         # get top right corner
-        max_x2, max_y2 = self.find_corner(contour_image, center, laplacian, 1, 1)
+        max_x2, max_y2 = self.find_corner(contour_image, center, laplacian, 1, -1)
 
 
         # cv2.circle(grayscale_image, (max_x1, max_y1), 5, 255, 3)
@@ -276,13 +282,13 @@ class Arm:
 
         # find corner
         x1, y1 = center
-        while x1 - 1 > -1 and y1 - 1 > -1 and contour_image[y1][x1] == 0:
+        while self.is_in_bounds(x1 + x_dir, y1 + y_dir, w, h) and contour_image[y1][x1] == 0:
             x1 += x_dir
             y1 += y_dir
 
         max_value = 0
         max_x, max_y = x1, y1
-        while -1 < x1 + x_dir < w and -1 < y1 + y_dir < h:
+        while self.is_in_bounds(x1 + x_dir, y1 + y_dir, w, h):
             if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
                 cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
                 convolved = scipy.signal.convolve(kernel, cropped)
@@ -305,6 +311,18 @@ class Arm:
                 break
 
         return max_x, max_y
+    
+
+    def is_in_bounds(self, x, y, w, h):
+        """checks if given parameters x and y are in bounds
+        args:
+            x, y: (int, int)
+            w, h: (int, int)
+        returns:
+            boolean
+        """
+
+        return -1 < x < w and -1 < y < h
 
 
     
