@@ -15,15 +15,12 @@ cap = cv2.VideoCapture(0)
 
 wrist_start = arm.wrist_start
 wrist_end = arm.wrist_end
-print(wrist_start)
-print(wrist_end)
 
 total_time = 0
 total_frames = 0
 
-while True:
-    start = time.time()
-    ret, frame = cap.read()
+def get_wrist_corners(frame):
+    global wrist_start, wrist_end
 
     grayscale_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
@@ -48,12 +45,20 @@ while True:
 
     wrist_start, wrist_end = arm.calculate_new_start_end((wrist_center_x + cropped_wrist_x, wrist_center_y + cropped_wrist_y), padding=150)
 
+    return wrist_x1, wrist_y1, wrist_x2, wrist_y2
+
+
+while True:
+    start = time.time()
+    ret, frame = cap.read()
+
+    wrist_x1, wrist_y1, wrist_x2, wrist_y2 = get_wrist_corners(frame)
+
     # testing
     corner_image = cv2.circle(frame, (wrist_x1, wrist_y1), 3, (0, 0, 255), 5)
     cv2.circle(frame, (wrist_x2, wrist_y2), 3, (0, 0, 255), 5)
 
-    cv2.circle(frame, (wrist_center_x + cropped_wrist_x, wrist_center_y + cropped_wrist_y), 3, (255, 0, 0), 5)
-
+    # cv2.circle(frame, (wrist_center_x + cropped_wrist_x, wrist_center_y + cropped_wrist_y), 3, (255, 0, 0), 5)
     cv2.imshow("Frame", frame)
 
     end = time.time()

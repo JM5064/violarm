@@ -15,6 +15,7 @@ class Arm:
         self.width = still_image.shape[1]
         self.height = still_image.shape[0]
 
+        # prompt for wrist
         still_image_copy = still_image.copy()
         self.wrist_start, self.wrist_end = self.prompt_selection(still_image_copy, "Draw Selection Around Wrist")
 
@@ -243,71 +244,12 @@ class Arm:
                             [0, 2, 0, -2, 0],
                             [1, 0, -2, 0, 1]])
 
+        # get top left corner
+        max_x1, max_y1 = self.find_corner(contour_image, center, laplacian, -1, 1)
 
-        w = grayscale_image.shape[1]
-        h = grayscale_image.shape[0]
+        # get top right corner
+        max_x2, max_y2 = self.find_corner(contour_image, center, laplacian, 1, 1)
 
-        # find top left corner
-        x1, y1 = center
-        while x1 - 1 > -1 and y1 - 1 > -1 and contour_image[y1][x1] == 0:
-            x1 -= 1
-            y1 -= 1
-
-        max_value = 0
-        max_x1, max_y1 = x1, y1
-        while x1 - 1 > -1 and y1 - 1 > -1:
-            if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
-                cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
-                convolved = scipy.signal.convolve(laplacian, cropped)
-
-                if abs(convolved[3][3]) > max_value:
-                    max_value = abs(convolved[3][3])
-                    max_x1, max_y1 = x1, y1
-
-            if contour_image[y1-1][x1-1] == 255:
-                x1 -= 1
-                y1 -= 1
-            elif contour_image[y1+1][x1-1] == 255:
-                x1 -= 1
-                y1 += 1
-            elif contour_image[y1-1][x1] == 255:
-                y1 -= 1
-            elif contour_image[y1][x1-1] == 255:
-                x1 -= 1
-            else:
-                break
-
-        # ---------------------------------------
-
-        # find top right corner
-        x2, y2 = center
-        while x2 + 1 < w and y2 - 1 > -1 and contour_image[y2][x2] == 0:
-            x2 += 1
-            y2 -= 1
-
-        max_value = 0
-        max_x2, max_y2 = x2, y2
-        while x2 + 1 < w and y2 - 1 > 0:
-            if x2 - 2 > -1 and y2 - 2 > -1 and x2 + 2 < w and y2 + 2 < h:
-                cropped = contour_image[y2-2:y2+3, x2-2:x2+3]
-                convolved = scipy.signal.convolve(laplacian, cropped)
-
-                if abs(convolved[3][3]) > max_value:
-                    max_value = abs(convolved[3][3])
-                    max_x2, max_y2 = x2, y2
-
-            if contour_image[y2-1][x2+1] == 255:
-                x2 += 1
-                y2 -= 1
-            elif contour_image[y2+1][x2+1] == 255:
-                x2 += 1
-                y2 += 1
-            elif contour_image[y2-1][x2] == 255:
-                y2 -= 1
-            elif contour_image[y2][x2+1] == 255:
-                x2 += 1
-            else:
-                break
 
         # cv2.circle(grayscale_image, (max_x1, max_y1), 5, 255, 3)
         # cv2.circle(grayscale_image, (max_x1_big, max_y1_big), 5, 0, 3)
@@ -316,6 +258,54 @@ class Arm:
         # return
 
         return max_x1, max_y1, max_x2, max_y2
+    
+
+    def find_corner(self, contour_image, center, kernel, x_dir, y_dir):
+        """Find a corner of a rectangle given args
+        args:
+            contour_image: binary image of a cropped grayscale image
+            center: (int, int) center pixel
+            kernel: laplcian kernel for finding corners
+            x_dir, y_dir: {-1, 1}. Direction to travel. eg: -1, -1 -> top left corner
+
+        returns:
+            max_x, max_y: pixels of the specified corner
+        """
+        w = contour_image.shape[1]
+        h = contour_image.shape[0]
+
+        # find corner
+        x1, y1 = center
+        while x1 - 1 > -1 and y1 - 1 > -1 and contour_image[y1][x1] == 0:
+            x1 += x_dir
+            y1 += y_dir
+
+        max_value = 0
+        max_x, max_y = x1, y1
+        while -1 < x1 + x_dir < w and -1 < y1 + y_dir < h:
+            if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
+                cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
+                convolved = scipy.signal.convolve(kernel, cropped)
+
+                if abs(convolved[3][3]) > max_value:
+                    max_value = abs(convolved[3][3])
+                    max_x, max_y = x1, y1
+
+            if contour_image[y1+y_dir][x1+x_dir] == 255:
+                x1 += x_dir
+                y1 += y_dir
+            elif contour_image[y1-y_dir][x1+x_dir] == 255:
+                x1 += x_dir
+                y1 -= y_dir
+            elif contour_image[y1+y_dir][x1] == 255:
+                y1 += y_dir
+            elif contour_image[y1][x1+x_dir] == 255:
+                x1 += x_dir
+            else:
+                break
+
+        return max_x, max_y
+
 
     
     def calculate_new_start_end(self, center, padding):
