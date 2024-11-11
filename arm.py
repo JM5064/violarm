@@ -309,6 +309,11 @@ class Arm:
             else:
                 break
 
+        # cv2.circle(grayscale_image, (max_x1, max_y1), 5, 255, 3)
+        # cv2.circle(grayscale_image, (max_x1_big, max_y1_big), 5, 0, 3)
+        # cv2.circle(grayscale_image, (max_x2, max_y2), 5, 255, 3)
+        # utils.display_image(grayscale_image, "test")
+        # return
 
         return max_x1, max_y1, max_x2, max_y2
 
@@ -330,46 +335,3 @@ class Arm:
 
         return start_point, end_point
 
-
-# still_image_copy = still_image.copy()
-# wrist_start, wrist_end = prompt_selection(still_image_copy, "Draw Selection Around Wrist")
-
-# wrist_crop, _, _ = crop_image(grayscale_still_image, wrist_start, wrist_end, 0)
-
-
-# # get second image
-# still_image2 = get_still_image()
-# grayscale_still_image2 = cv2.cvtColor(still_image2, cv2.COLOR_RGB2GRAY)
-
-# # crop from second image
-# padding = 200
-# wrist_crop_larger, cropped_x, cropped_y = crop_image(grayscale_still_image2, wrist_start, wrist_end, padding)
-
-# # match first crop to second crop
-# keypoints1, descriptors1 = get_keypoints(wrist_crop)
-# keypoints2, descriptors2 = get_keypoints(wrist_crop_larger)
-
-# matches = get_matches(descriptors1, descriptors2, 300)
-
-# draw_matches(wrist_crop, wrist_crop_larger, keypoints1, keypoints2, matches)
-# center_x, center_y = find_center(matches, keypoints2, 50)
-# # center_x += cropped_x1
-# # center_y += cropped_y1
-
-# # centerimage = cv2.circle(still_image2, (center_x, center_y), 5, (0, 0, 255), 10)
-# # display_image(centerimage, "Center")
-
-# large_contours = filter_small_contours(wrist_crop_larger, 300)
-# x1, y1, x2, y2 = find_corners(wrist_crop_larger, (center_x, center_y), large_contours)
-# x1 += cropped_x
-# x2 += cropped_x
-# y1 += cropped_y
-# y2 += cropped_y
-
-# corner_image = cv2.circle(still_image2, (x1, y1), 3, (0, 0, 255), 5)
-# cv2.circle(still_image2, (x2, y2), 3, (0, 0, 255), 5)
-# display_image(corner_image, "Corners")
-
-
-# cap.release()
-# cv2.destroyAllWindows()
