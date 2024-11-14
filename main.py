@@ -57,20 +57,20 @@ while True:
     wrist_x1, wrist_y1, wrist_x2, wrist_y2, new_wrist_start, new_wrist_end = get_corners(frame, wrist_start, wrist_end)
     wrist_start, wrist_end = new_wrist_start, new_wrist_end
 
-    elbow_x1, elbow_y1, elbow_x2, elbow_y2, new_elbow_start, new_elbow_end = get_corners(frame, elbow_start, elbow_end)
-    elbow_start, elbow_end = new_elbow_start, new_elbow_end
+    # elbow_x1, elbow_y1, elbow_x2, elbow_y2, new_elbow_start, new_elbow_end = get_corners(frame, elbow_start, elbow_end)
+    # elbow_start, elbow_end = new_elbow_start, new_elbow_end
 
-    corners = np.array([[wrist_x1, wrist_y1], [wrist_x2, wrist_y2], [elbow_x2, elbow_y2], [elbow_x1, elbow_y1]])
-    corners = corners.reshape((-1, 1, 2))
+    # corners = np.array([[wrist_x1, wrist_y1], [wrist_x2, wrist_y2], [elbow_x2, elbow_y2], [elbow_x1, elbow_y1]])
+    # corners = corners.reshape((-1, 1, 2))
 
     # testing
     corner_image = cv2.circle(frame, (wrist_x1, wrist_y1), 3, (0, 0, 255), 5)
     cv2.circle(frame, (wrist_x2, wrist_y2), 3, (0, 0, 255), 5)
 
-    cv2.circle(frame, (elbow_x1, elbow_y1), 3, (0, 0, 255), 5)
-    cv2.circle(frame, (elbow_x2, elbow_y2), 3, (0, 0, 255), 5)
+    # cv2.circle(frame, (elbow_x1, elbow_y1), 3, (0, 0, 255), 5)
+    # cv2.circle(frame, (elbow_x2, elbow_y2), 3, (0, 0, 255), 5)
 
-    cv2.polylines(frame, [corners], isClosed=True, color=(255, 0, 0), thickness=2)
+    # cv2.polylines(frame, [corners], isClosed=True, color=(255, 0, 0), thickness=2)
 
 
     cv2.imshow("Frame", frame)

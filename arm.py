@@ -251,10 +251,10 @@ class Arm:
                             [1, 0, -2, 0, 1]])
 
         # get top left corner
-        max_x1, max_y1 = self.find_corner(contour_image, center, laplacian, -1, -1)
+        max_x1, max_y1 = self.find_corner(grayscale_image, contour_image, center, laplacian, -1, -1)
 
         # get top right corner
-        max_x2, max_y2 = self.find_corner(contour_image, center, laplacian, 1, -1)
+        max_x2, max_y2 = self.find_corner(grayscale_image, contour_image, center, laplacian, 1, -1)
 
 
         # cv2.circle(grayscale_image, (max_x1, max_y1), 5, 255, 3)
@@ -266,7 +266,7 @@ class Arm:
         return max_x1, max_y1, max_x2, max_y2
     
 
-    def find_corner(self, contour_image, center, kernel, x_dir, y_dir):
+    def find_corner(self, grayscale_image, contour_image, center, kernel, x_dir, y_dir):
         """Find a corner of a rectangle given args
         args:
             contour_image: binary image of a cropped grayscale image
@@ -288,13 +288,14 @@ class Arm:
 
         max_value = 0
         max_x, max_y = x1, y1
+        crop_size = 3
         while self.is_in_bounds(x1 + x_dir, y1 + y_dir, w, h):
-            if x1 - 2 > -1 and y1 - 2 > -1 and x1 + 2 < w and y1 + 2 < h:
-                cropped = contour_image[y1-2:y1+3, x1-2:x1+3]
-                convolved = scipy.signal.convolve(kernel, cropped)
+            if x1 - crop_size > -1 and y1 - crop_size > -1 and x1 + crop_size < w and y1 + crop_size < h:
+                cropped = grayscale_image[y1-crop_size:y1+crop_size+1, x1-crop_size:x1+crop_size+1]
+                min_eigenvalue = np.linalg.det(cropped) - 0.05 * (np.trace(cropped)) ** 2
 
-                if abs(convolved[3][3]) > max_value:
-                    max_value = abs(convolved[3][3])
+                if abs(min_eigenvalue) > max_value:
+                    max_value = abs(min_eigenvalue)
                     max_x, max_y = x1, y1
 
             if contour_image[y1+y_dir][x1+x_dir] == 255:
