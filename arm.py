@@ -291,11 +291,11 @@ class Arm:
         crop_size = 3
         while self.is_in_bounds(x1 + x_dir, y1 + y_dir, w, h):
             if x1 - crop_size > -1 and y1 - crop_size > -1 and x1 + crop_size < w and y1 + crop_size < h:
-                cropped = grayscale_image[y1-crop_size:y1+crop_size+1, x1-crop_size:x1+crop_size+1]
-                min_eigenvalue = np.linalg.det(cropped) - 0.05 * (np.trace(cropped)) ** 2
+                cropped = grayscale_image[y1 - crop_size : y1 + crop_size + 1, x1 - crop_size : x1 + crop_size + 1]
+                min_eigenvalue = abs(np.linalg.det(cropped) - 0.05 * (np.trace(cropped)) ** 2)
 
-                if abs(min_eigenvalue) > max_value:
-                    max_value = abs(min_eigenvalue)
+                if min_eigenvalue > max_value:
+                    max_value = min_eigenvalue
                     max_x, max_y = x1, y1
 
             if contour_image[y1+y_dir][x1+x_dir] == 255:
