@@ -4,73 +4,52 @@ import mediapipe as mp
 import arm
 import utils
 import time
+import torch
+from torchvision import transforms
+from ultralytics import YOLO
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
-arm = arm.Arm()
-
-
+model = YOLO("runs/pose/train2/weights/best.pt")
 cap = cv2.VideoCapture(0)
-
-wrist_start = arm.wrist_start
-wrist_end = arm.wrist_end
-
-elbow_start = arm.elbow_start
-elbow_end = arm.elbow_end
 
 total_time = 0
 total_frames = 0
 
-def get_corners(frame, start, end):
-    grayscale_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
-    # crop wrist
-    crop, cropped_x, cropped_y = arm.crop_image(grayscale_frame, start, end, padding=150)
+def predict(frame):
+    results = model(frame)
 
-    # get keypoints of cropped wrist
-    curr_keypoints, curr_descriptors = arm.get_keypoints(crop)
-
-    # get matches and center of wrist
-    matches = arm.get_matches(arm.wrist_descriptors, curr_descriptors, threshold=300)
-    center_x, center_y = arm.find_center(matches, curr_keypoints, distance_threshold=50)
-
-    # find corners of wrist
-    large_contours = arm.filter_small_contours(crop, size_threshold=300)
-    x1, y1, x2, y2 = arm.find_corners(crop, (center_x, center_y), large_contours)
-
-    x1 += cropped_x
-    x2 += cropped_x
-    y1 += cropped_y
-    y2 += cropped_y
-
-    start, end = arm.calculate_new_start_end((center_x + cropped_x, center_y + cropped_y), padding=150)
-
-    return x1, y1, x2, y2, start, end
+    return results
 
 
 while True:
     start = time.time()
     ret, frame = cap.read()
 
-    wrist_x1, wrist_y1, wrist_x2, wrist_y2, new_wrist_start, new_wrist_end = get_corners(frame, wrist_start, wrist_end)
-    wrist_start, wrist_end = new_wrist_start, new_wrist_end
+    results = predict(frame)
 
-    # elbow_x1, elbow_y1, elbow_x2, elbow_y2, new_elbow_start, new_elbow_end = get_corners(frame, elbow_start, elbow_end)
-    # elbow_start, elbow_end = new_elbow_start, new_elbow_end
+    keypoints = results[0].keypoints.xy
+    if keypoints.shape == torch.Size([1, 4, 2]):
+        points = keypoints.numpy()[0]
 
-    # corners = np.array([[wrist_x1, wrist_y1], [wrist_x2, wrist_y2], [elbow_x2, elbow_y2], [elbow_x1, elbow_y1]])
-    # corners = corners.reshape((-1, 1, 2))
+        corners = []
+        for point in points:
+            x, y = int(point[0]), int(point[1])
+            corners.append([x, y])
+            cv2.circle(frame, (x, y), 3, (255, 0, 0), 3)
 
-    # testing
-    corner_image = cv2.circle(frame, (wrist_x1, wrist_y1), 3, (0, 0, 255), 5)
-    cv2.circle(frame, (wrist_x2, wrist_y2), 3, (0, 0, 255), 5)
+        corners[-1], corners[-2] = corners[-2], corners[-1]
+        corners = np.array(corners)
+        corners = corners.reshape((-1, 1, 2))
+        cv2.polylines(frame, [corners], isClosed=True, color=(255, 0, 0), thickness=2)
 
-    # cv2.circle(frame, (elbow_x1, elbow_y1), 3, (0, 0, 255), 5)
-    # cv2.circle(frame, (elbow_x2, elbow_y2), 3, (0, 0, 255), 5)
-
-    # cv2.polylines(frame, [corners], isClosed=True, color=(255, 0, 0), thickness=2)
+    # hand_points = hands.process(frame)
+    # if hand_points.multi_hand_landmarks:
+    #     for hand_landmarks in hand_points.multi_hand_landmarks:
+    #         mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
 
     cv2.imshow("Frame", frame)
