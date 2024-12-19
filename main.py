@@ -12,7 +12,7 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 mp_draw = mp.solutions.drawing_utils
 
-model = YOLO("runs/pose/train2/weights/best.pt")
+model = YOLO("runs/pose/yolov11/weights/best.pt")
 cap = cv2.VideoCapture(0)
 
 total_time = 0
@@ -20,7 +20,7 @@ total_frames = 0
 
 
 def predict(frame):
-    results = model(frame)
+    results = model(frame, verbose=False)
 
     return results
 
