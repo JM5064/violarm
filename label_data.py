@@ -91,6 +91,9 @@ def next_image():
 
 
 def skip_image():
+    global points
+    points = []
+
     skip_path = image_path.replace(image_folder, skip_folder)
     os.rename(image_path, skip_path)
 
@@ -103,6 +106,7 @@ def correct_labels():
         print(f"{image_path} Labeled fingers incorrectly")
         return False
     
+    # check arm labels
     if not (points[4][0] <= points[5][0] and points[5][1] <= points[6][1] and 
             points[6][0] >= points[7][0] and points[7][1] >= points[4][1]):
         print(f"{image_path} Labeled arm incorrectly")
