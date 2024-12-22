@@ -1,16 +1,15 @@
 import cv2
 import numpy as np
 import arm
+import video
 import utils
 import time
-import torch
-from torchvision import transforms
 from ultralytics import YOLO
 
 model = YOLO("runs/pose/yolov11/weights/best.pt")
-main_cap = cv2.VideoCapture(0)
-url = "camera_ip"
-side_cap = cv2.VideoCapture(url)
+main_cap = video.Video(0)
+url = "camera_url"
+side_cap = video.Video(url)
 
 total_time = 0
 total_frames = 0
@@ -43,26 +42,32 @@ while True:
     start = time.time()
 
     if main_cap.isOpened():
-        ret_main, frame_main = main_cap.read()
+        main_frame = main_cap.read()
 
-        results = predict(frame_main)
+        if main_frame is None:
+            continue
 
-        keypoints = results[0].keypoints.xy
-        if keypoints.shape == (1, 4, 2):
-            frame_main = draw_arm_outline(frame_main, keypoints)
+        main_results = predict(main_frame)
 
-        cv2.imshow("Main Frame", frame_main)
+        main_keypoints = main_results[0].keypoints.xy
+        if main_keypoints.shape == (1, 4, 2):
+            main_frame = draw_arm_outline(main_frame, main_keypoints)
+
+        cv2.imshow("Main Frame", main_frame)
 
     if side_cap.isOpened():
-        ret_side, frame_side = side_cap.read()
+        side_frame = side_cap.read()
 
-        results = predict(frame_side)
+        if side_frame is None:
+            continue
 
-        keypoints = results[0].keypoints.xy
-        if keypoints.shape == (1, 4, 2):
-            frame_side = draw_arm_outline(frame_side, keypoints)
+        side_results = predict(side_frame)
+
+        side_keypoints = side_results[0].keypoints.xy
+        if side_keypoints.shape == (1, 4, 2):
+            side_frame = draw_arm_outline(side_frame, side_keypoints)
             
-        cv2.imshow("Side Frame", frame_side)
+        cv2.imshow("Side Frame", side_frame)
 
 
     end = time.time()
@@ -79,5 +84,6 @@ print(1000 / average_time, "fps")
 print("Average additional time per frame: ", average_time - default_time, "ms")
 
 main_cap.release()
+side_cap.release()
 cv2.destroyAllWindows()
 
