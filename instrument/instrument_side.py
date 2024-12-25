@@ -10,7 +10,7 @@ class InstrumentSide(InstrumentArm):
 
 
     def get_sideline(self):
-        return InstrumentArm.get_line(self.top_right, self.bottom_right)
+        return self.get_line(self.top_right, self.bottom_right)
 
 
     def get_pressed_fingers(self, fingers):
@@ -18,17 +18,9 @@ class InstrumentSide(InstrumentArm):
 
 
     def is_pressed(self, finger, threshold):
-        x, y = finger
         sideline = self.get_sideline()
 
-        if sideline is None:
-            # assume vertical line
-            dist = abs(x - self.top_right[0])
-        else:
-            a, b, c = sideline
-
-            dist = abs(a * x + b * y + c) / np.sqrt(a**2 + b**2)
-
+        dist = self.distance_to_line(finger, sideline)
         
         return dist <= threshold
 
