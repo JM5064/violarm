@@ -27,6 +27,6 @@ def display_contours(image, contours, shift_x, shift_y):
             color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             cv2.drawContours(image_copy, [contour], -1, color, 3)
 
-        display_image(image_copy, "Contours")
+        # display_image(image_copy, "Contours")
 
         return image_copy
