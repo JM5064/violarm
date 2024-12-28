@@ -4,6 +4,10 @@ from ultralytics import YOLO
 import time
 
 import video
+from instrument.instrument import Instrument
+from instrument.instrument_string import InstrumentString
+from instrument.instrument_front import InstrumentFront
+from instrument.instrument_side import InstrumentSide
 
 
 model = YOLO("/Users/justinmao/Documents/GitHub/violarm/best_hand_arm.pt")
@@ -15,17 +19,32 @@ total_time = 0
 total_frames = 0
 
 
+instrument_side = None
+instrument_front = None
+
+def initialize_instrument():
+    global instrument_side, instrument_front
+
+    a_string = InstrumentString(440, 880)
+    
+    violin = Instrument([a_string])
+
+    instrument_side = InstrumentSide(None, 20)
+    instrument_front = InstrumentFront(None)
+
+
+initialize_instrument()
+
+
 def predict(frame):
     results = model(frame, verbose=False)
 
     return results
 
 
-def draw_arm_outline(frame, keypoints):
-    points = keypoints.numpy()[0]
-
+def draw_arm_outline(frame, arm_keypoints):
     corners = []
-    for point in points:
+    for point in arm_keypoints:
         x, y = int(point[0]), int(point[1])
         corners.append([x, y])
         cv2.circle(frame, (x, y), 3, (255, 0, 0), 3)
@@ -34,13 +53,33 @@ def draw_arm_outline(frame, keypoints):
     corners = corners.reshape((-1, 1, 2))
     cv2.polylines(frame, [corners], isClosed=True, color=(255, 0, 0), thickness=2)
 
-    if len(keypoints.numpy()) > 1:
-        points = keypoints.numpy()[1]
-        for point in points:
-            x, y = int(point[0]), int(point[1])
-            cv2.circle(frame, (x, y), 3, (0, 0, 255), 3)
+    return frame
+
+
+def draw_hand_points(frame, hand_keypoints):
+    for point in hand_keypoints:
+        x, y = int(point[0]), int(point[1])
+        cv2.circle(frame, (x, y), 3, (0, 0, 255), 3)
 
     return frame
+
+
+def process_frame(frame):
+    frame_results = predict(frame)
+    frame_keypoints = frame_results[0].keypoints.xy
+
+    arm_keypoints = []
+    hand_keypoints = []
+
+    if len(frame_keypoints[0]) > 0:
+        for keypoint in frame_keypoints[0]:
+            arm_keypoints.append(keypoint)
+
+    if len(frame_keypoints) > 1:
+        for keypoint in frame_keypoints[1]:
+            hand_keypoints.append(keypoint)
+
+    return arm_keypoints, hand_keypoints
 
 
 while True:
@@ -52,10 +91,10 @@ while True:
         if front_frame is None:
             continue
 
-        front_results = predict(front_frame)
+        front_arm_keypoints, front_hand_keypoints = process_frame(front_frame)
 
-        front_keypoints = front_results[0].keypoints.xy
-        front_frame = draw_arm_outline(front_frame, front_keypoints)
+        front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
+        front_frame = draw_hand_points(front_frame, front_hand_keypoints)
 
         cv2.imshow("Front Frame", front_frame)
 
@@ -67,11 +106,11 @@ while True:
         
         side_frame = cv2.resize(side_frame, (960, 720))
 
-        side_results = predict(side_frame)
+        side_arm_keypoints, side_hand_keypoints = process_frame(side_frame)
 
-        side_keypoints = side_results[0].keypoints.xy
-        side_frame = draw_arm_outline(side_frame, side_keypoints)
-            
+        side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
+        side_frame = draw_hand_points(side_frame, side_hand_keypoints)
+
         cv2.imshow("Side Frame", side_frame)
 
 

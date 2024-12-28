@@ -1,17 +1,26 @@
-from instrument_arm import InstrumentArm
+# from instrument_arm import InstrumentArm
+from instrument.instrument_arm import InstrumentArm
 import numpy as np
 import time
 
 class InstrumentFront(InstrumentArm):
 
     def __init__(self, keypoints):
-        self.top_left = keypoints[0]
-        self.top_right = keypoints[1]
-        self.bottom_right = keypoints[2]
-        self.bottom_left = keypoints[3]
+        if keypoints is not None:
+            self.top_left = keypoints[0]
+            self.top_right = keypoints[1]
+            self.bottom_right = keypoints[2]
+            self.bottom_left = keypoints[3]
+        else:
+            self.top_left = None
+            self.top_right = None
+            self.bottom_right = None
+            self.bottom_left = None
 
 
     def get_notes(self, fingers, num_strings):
+        if self.top_left is None:
+            return
         if num_strings <= 0:
             raise Exception("num_strings must be greater than 0")
         

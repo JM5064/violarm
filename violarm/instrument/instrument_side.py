@@ -1,12 +1,17 @@
-from instrument_arm import InstrumentArm
+from instrument.instrument_arm import InstrumentArm
 import numpy as np
 
 # TODO: time these methods to see whether class implementation is faster
 
 class InstrumentSide(InstrumentArm):
     def __init__(self, keypoints, distance_threshold):
-        self.top_right = keypoints[1]
-        self.bottom_right = keypoints[2]
+        if keypoints is not None:
+            self.top_right = keypoints[1]
+            self.bottom_right = keypoints[2]
+        else:
+            self.top_right = None
+            self.bottom_right = None
+        
         self.distance_threshold = distance_threshold
 
 
@@ -16,7 +21,6 @@ class InstrumentSide(InstrumentArm):
 
     def is_pressed(self, finger, threshold):
         dist = self.distance_to_line(finger, self.top_right, self.bottom_right)
-        
         return dist <= threshold
 
 
