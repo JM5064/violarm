@@ -15,8 +15,12 @@ class InstrumentSide(InstrumentArm):
         self.distance_threshold = distance_threshold
 
 
-    def get_pressed_fingers(self, fingers):
-        return [finger for finger in fingers if self.is_pressed(finger, self.distance_threshold)]
+    def get_pressed_fingers(self, front_fingers, side_fingers):
+        if len(front_fingers) != len(side_fingers):
+            return []
+        
+        return [front_fingers[i] for i in range(len(side_fingers))
+                if self.is_pressed(side_fingers[i], self.distance_threshold)]
 
 
     def is_pressed(self, finger, threshold):
