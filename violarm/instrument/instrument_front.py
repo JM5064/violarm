@@ -6,31 +6,26 @@ import time
 class InstrumentFront(InstrumentArm):
 
     def __init__(self, keypoints):
-        if keypoints is not None:
-            self.top_left = keypoints[0]
-            self.top_right = keypoints[1]
-            self.bottom_right = keypoints[2]
-            self.bottom_left = keypoints[3]
-        else:
-            self.top_left = None
-            self.top_right = None
-            self.bottom_right = None
-            self.bottom_left = None
+        self.keypoints = keypoints
 
 
     def get_notes(self, fingers, num_strings):
-        if self.top_left is None:
+        if self.keypoints is None or len(self.keypoints) != 4:
             return
+        
         if num_strings <= 0:
             raise Exception("num_strings must be greater than 0")
         
-        top_points = self.divide_baseline(self.top_left, self.top_right, num_strings)
-        bottom_points = self.divide_baseline(self.bottom_left, self.bottom_right, num_strings)
+        top_left, top_right, bottom_right, bottom_left = self.keypoints
+        
+        top_points = self.divide_baseline(top_left, top_right, num_strings)
+        bottom_points = self.divide_baseline(bottom_left, bottom_right, num_strings)
         
         notes = []
         strings = []
         for finger in fingers:
-            if not self.in_quadrilateral(finger, self.top_left, self.top_right, self.bottom_right, self.bottom_left):
+            if not self.in_quadrilateral(finger, top_left, top_right, bottom_right, bottom_left):
+                print("not in quad")
                 continue
 
             min_distance = float('inf')
@@ -69,22 +64,3 @@ class InstrumentFront(InstrumentArm):
 
         return np.linalg.norm(projected_vector) / self.distance(line_p1, line_p2)
 
-
-
-top_left = [0, 0]
-top_right = [1200,0]
-bottom_right = [1600,1200]
-bottom_left = [0,1200]
-
-keypoints = [top_left, top_right, bottom_right, bottom_left]
-pressed_fingers = [[432,322], [80, 1000]]
-
-start = time.time()
-instrumentFront = InstrumentFront(keypoints)
-
-for i in range(10000):
-    instrumentFront.get_notes(pressed_fingers, 4)
-
-end = time.time()
-
-print(f'Completed in {end - start} milliseconds')

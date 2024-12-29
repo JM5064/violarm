@@ -19,8 +19,8 @@ total_time = 0
 total_frames = 0
 
 
-instrument_side = None
-instrument_front = None
+instrument_side = InstrumentSide(None, 20)
+instrument_front = InstrumentFront(None)
 
 def initialize_instrument():
     global instrument_side, instrument_front
@@ -28,9 +28,6 @@ def initialize_instrument():
     a_string = InstrumentString(440, 880)
     
     violin = Instrument([a_string])
-
-    instrument_side = InstrumentSide(None, 20)
-    instrument_front = InstrumentFront(None)
 
 
 initialize_instrument()
@@ -112,6 +109,20 @@ while True:
         side_frame = draw_hand_points(side_frame, side_hand_keypoints)
 
         cv2.imshow("Side Frame", side_frame)
+
+    if (front_cap.isOpened() and side_cap.isOpened() and
+        len(front_arm_keypoints) > 0 and len(front_hand_keypoints) > 0 and
+        len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
+
+
+        instrument_front.keypoints = front_arm_keypoints
+        instrument_side.keypoints = side_arm_keypoints
+
+        pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
+        
+        string, note = instrument_front.get_notes(pressed_fingers, 2)
+        print(f'Note value(s) {note} played on string(s) {string}')
+        print("---------")
 
 
     end = time.time()

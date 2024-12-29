@@ -5,13 +5,7 @@ import numpy as np
 
 class InstrumentSide(InstrumentArm):
     def __init__(self, keypoints, distance_threshold):
-        if keypoints is not None:
-            self.top_right = keypoints[1]
-            self.bottom_right = keypoints[2]
-        else:
-            self.top_right = None
-            self.bottom_right = None
-        
+        self.keypoints = keypoints        
         self.distance_threshold = distance_threshold
 
 
@@ -24,7 +18,14 @@ class InstrumentSide(InstrumentArm):
 
 
     def is_pressed(self, finger, threshold):
-        dist = self.distance_to_line(finger, self.top_right, self.bottom_right)
+        if self.keypoints is None:
+            return False
+        
+        top_right = self.keypoints[1]
+        bottom_right = self.keypoints[2]
+        
+        dist = self.distance_to_line(finger, top_right, bottom_right)
+
         return dist <= threshold
 
 
