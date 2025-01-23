@@ -1,7 +1,7 @@
 
 class InstrumentString:
     
-    def __init__(self, min_freq, max_freq=2637, string_length=0.325, equal_tuning=False):
+    def __init__(self, min_freq: int, max_freq=2637, string_length=0.325, equal_tuning=False):
         self.min_freq = min_freq
         self.max_freq = max_freq
 
@@ -11,19 +11,30 @@ class InstrumentString:
         self.equal_tuning = equal_tuning
 
 
-    def get_playing_note(self, notes):
-        if len(notes) == 0:
-            return None
+    def get_playing_note(self, notes: list[int]) -> int:
+        '''Gets the highest note being pressed on the string
+        args:
+            notes: list[int] of note fractions or frequencies
+
+        returns:
+            highest_note: int 
+        '''
         
-        highest_note = notes[0]
-        for note in notes:
-            if note > highest_note:
-                highest_note = note
-
-        return highest_note
+        if len(notes) == 0:
+            return
+    
+        return max(notes)
 
 
-    def to_frequency(self, note_fraction):
+    def to_frequency(self, note_fraction: float) -> int:
+        """Converts fractional note form to frequency
+        args: 
+            note_fraction: float
+
+        returns:
+            frequency: int
+        """
+
         if self.equal_tuning:
             return round(self.min_freq + note_fraction * (self.max_freq - self.min_freq))
         
@@ -31,11 +42,11 @@ class InstrumentString:
         if new_length == 0:
             return self.max_freq
         
-        new_frequency = round(self.velocity / (2 * new_length))
+        frequency = round(self.velocity / (2 * new_length))
 
-        if new_frequency > self.max_freq:
+        if frequency > self.max_freq:
             return self.max_freq
 
-        return new_frequency
+        return frequency
 
         
