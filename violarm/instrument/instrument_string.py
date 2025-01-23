@@ -11,6 +11,18 @@ class InstrumentString:
         self.equal_tuning = equal_tuning
 
 
+    def get_playing_note(self, notes):
+        if len(notes) == 0:
+            return None
+        
+        highest_note = notes[0]
+        for note in notes:
+            if note > highest_note:
+                highest_note = note
+
+        return highest_note
+
+
     def to_frequency(self, note_fraction):
         if self.equal_tuning:
             return round(self.min_freq + note_fraction * (self.max_freq - self.min_freq))
