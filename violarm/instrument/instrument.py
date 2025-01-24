@@ -77,3 +77,7 @@ class Instrument:
         self.notes[string_num] = (frequency, phase)
 
 
+    def is_playing(self, string_num: int) -> bool:
+        return self.notes[string_num] is not None
+
+
