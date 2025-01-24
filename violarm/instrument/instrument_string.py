@@ -11,13 +11,13 @@ class InstrumentString:
         self.equal_tuning = equal_tuning
 
 
-    def get_playing_note(self, notes: list[int]) -> int:
+    def get_playing_note(self, notes: list[float]) -> float:
         '''Gets the highest note being pressed on the string
         args:
-            notes: list[int] of note fractions or frequencies
+            notes: list[float] of note fractions or frequencies
 
         returns:
-            highest_note: int 
+            highest_note: float
         '''
         
         if len(notes) == 0:
@@ -44,6 +44,7 @@ class InstrumentString:
         
         frequency = round(self.velocity / (2 * new_length))
 
+        # Threshold frequency to make sure it's not too high
         if frequency > self.max_freq:
             return self.max_freq
 
