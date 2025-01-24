@@ -10,27 +10,27 @@ from instrument.instrument_front import InstrumentFront
 from instrument.instrument_side import InstrumentSide
 
 
-model = YOLO("/Users/justinmao/Documents/GitHub/violarm/best_hand_arm.pt")
+model = YOLO("best_maybe2.pt")
 front_cap = video.Video(0)
-url = "http://192.168.0.57:4747/video"
+url = ""
 side_cap = video.Video(url)
-
-total_time = 0
-total_frames = 0
-
 
 instrument_side = InstrumentSide(None, 20)
 instrument_front = InstrumentFront(None)
 
-def initialize_instrument():
-    global instrument_side, instrument_front
+g_string = InstrumentString(196, 784)
+d_string = InstrumentString(293, 1175)
+a_string = InstrumentString(440, 1760)
+e_string = InstrumentString(659, 2637)
 
-    a_string = InstrumentString(440, 880)
-    
-    violin = Instrument([a_string])
+violin_strings = [g_string, d_string, a_string, e_string]
+violin = Instrument(violin_strings)
+
+violin.start()
 
 
-initialize_instrument()
+total_time = 0
+total_frames = 0
 
 
 def predict(frame):
@@ -119,9 +119,33 @@ while True:
         instrument_side.keypoints = side_arm_keypoints
 
         pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
+        string_notes = [[] for _ in range(violin.num_strings)]
         
-        string, note = instrument_front.get_notes(pressed_fingers, 2)
-        print(f'Note value(s) {note} played on string(s) {string}')
+        strings, notes = instrument_front.get_notes(pressed_fingers, violin.num_strings)
+
+        for i in range(len(strings)):
+            string_notes[strings[i]].append(notes[i])
+
+        string_note_freqs = [max(notes) if notes else None for notes in string_notes]
+        for i in range(violin.num_strings):
+            if string_note_freqs[i] is None:
+                continue
+
+            string_note_freqs[i] = violin_strings[i].to_frequency(string_note_freqs[i].item())
+
+        for i in range(violin.num_strings):
+            if violin.is_playing(i):
+                if string_note_freqs[i] is None:
+                    violin.remove_note(i)
+                else:
+                    violin.update_note(i, string_note_freqs[i])
+            else:
+                if string_note_freqs[i] is not None:
+                    violin.add_note(i, string_note_freqs[i])
+
+
+        print(f'Note value(s) {notes} played on string(s) {strings}')
+        print(string_note_freqs)
         print("---------")
 
 
@@ -136,8 +160,8 @@ default_time = 0.97 # milliseconds
 average_time = 1000 * (total_time / total_frames)
 print("Average time per frame: ", average_time, "ms")
 print(1000 / average_time, "fps")
-print("Average additional time per frame: ", average_time - default_time, "ms")
 
+violin.stop()
 front_cap.release()
 side_cap.release()
 cv2.destroyAllWindows()
