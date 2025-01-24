@@ -64,17 +64,22 @@ def draw_hand_points(frame, hand_keypoints):
 def process_frame(frame):
     frame_results = predict(frame)
     frame_keypoints = frame_results[0].keypoints.xy
+    classes = frame_results[0].boxes.cls
 
     arm_keypoints = []
     hand_keypoints = []
 
-    if len(frame_keypoints[0]) > 0:
-        for keypoint in frame_keypoints[0]:
-            arm_keypoints.append(keypoint)
-
-    if len(frame_keypoints) > 1:
-        for keypoint in frame_keypoints[1]:
-            hand_keypoints.append(keypoint)
+    for i in range(len(classes)):
+        if classes[i] == 0:
+            # hand
+            if len(hand_keypoints) == 0:
+                for keypoint in frame_keypoints[i]:
+                    hand_keypoints.append(keypoint)
+        else:
+            # arm
+            if len(arm_keypoints) == 0:
+                for keypoint in frame_keypoints[i]:
+                    arm_keypoints.append(keypoint)
 
     return arm_keypoints, hand_keypoints
 
