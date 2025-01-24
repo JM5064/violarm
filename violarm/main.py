@@ -131,7 +131,7 @@ while True:
         for i in range(len(strings)):
             string_notes[strings[i]].append(notes[i])
 
-        string_note_freqs = [max(notes) if notes else None for notes in string_notes]
+        string_note_freqs = [InstrumentString.get_playing_note(notes) for notes in string_notes]
         for i in range(violin.num_strings):
             if string_note_freqs[i] is None:
                 continue

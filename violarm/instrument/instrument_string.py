@@ -10,8 +10,8 @@ class InstrumentString:
 
         self.equal_tuning = equal_tuning
 
-
-    def get_playing_note(self, notes: list[float]) -> float:
+    @staticmethod
+    def get_playing_note(notes: list[float]) -> float:
         '''Gets the highest note being pressed on the string
         args:
             notes: list[float] of note fractions or frequencies
@@ -21,7 +21,7 @@ class InstrumentString:
         '''
         
         if len(notes) == 0:
-            return
+            return None
     
         return max(notes)
 
