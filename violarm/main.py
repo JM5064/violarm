@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from dotenv import load_dotenv
+import os
 import time
 
 import video
@@ -9,10 +11,14 @@ from instrument.instrument_string import InstrumentString
 from instrument.instrument_front import InstrumentFront
 from instrument.instrument_side import InstrumentSide
 
+load_dotenv()
 
 model = YOLO("best_maybe2.pt")
+
 front_cap = video.Video(0)
-url = ""
+ip = os.environ.get('IP')
+port = os.environ.get('PORT')
+url = f"http://{ip}:{port}/video"
 side_cap = video.Video(url)
 
 instrument_side = InstrumentSide(None, 20)
