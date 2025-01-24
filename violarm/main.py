@@ -61,6 +61,22 @@ def draw_hand_points(frame, hand_keypoints):
     return frame
 
 
+def draw_strings(frame, arm_keypoints, num_strings):
+    if len(arm_keypoints) != 4:
+        return frame
+    
+    top_left, top_right, bottom_right, bottom_left = arm_keypoints
+    top_points, bottom_points = instrument_front.get_string_baseline_points(
+        top_left, top_right, bottom_left, bottom_right, num_strings)
+    
+    for i in range(len(top_points)):
+        top_x, top_y = int(top_points[i][0]), int(top_points[i][1])
+        bottom_x, bottom_y = int(bottom_points[i][0]), int(bottom_points[i][1])
+        cv2.line(frame, (top_x, top_y), (bottom_x, bottom_y), (0, 255, 0), 2)
+    
+    return frame
+
+
 def process_frame(frame):
     frame_results = predict(frame)
     frame_keypoints = frame_results[0].keypoints.xy
@@ -97,6 +113,7 @@ while True:
 
         front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
         front_frame = draw_hand_points(front_frame, front_hand_keypoints)
+        front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings)
 
         cv2.imshow("Front Frame", front_frame)
 

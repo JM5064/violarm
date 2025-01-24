@@ -18,8 +18,7 @@ class InstrumentFront(InstrumentArm):
         
         top_left, top_right, bottom_right, bottom_left = self.keypoints
         
-        top_points = self.divide_baseline(top_left, top_right, num_strings)
-        bottom_points = self.divide_baseline(bottom_left, bottom_right, num_strings)
+        top_points, bottom_points = self.get_string_baseline_points(top_left, top_right, bottom_left, bottom_right, num_strings)
         
         notes = []
         strings = []
@@ -57,6 +56,13 @@ class InstrumentFront(InstrumentArm):
             points.append([x, y])
 
         return points
+    
+
+    def get_string_baseline_points(self, top_left, top_right, bottom_left, bottom_right, num_strings):
+        top_points = self.divide_baseline(top_left, top_right, num_strings)
+        bottom_points = self.divide_baseline(bottom_left, bottom_right, num_strings)
+
+        return top_points, bottom_points
     
 
     def get_note_fraction(self, p, line_p1, line_p2):
