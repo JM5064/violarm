@@ -46,8 +46,8 @@ class InstrumentFront(InstrumentArm):
     def divide_baseline(self, p1, p2, num_strings):
         points = []
 
-        dx = abs(p2[0] - p1[0]) / (num_strings * 2)
-        dy = abs(p2[1] - p1[1]) / (num_strings * 2)
+        dx = (p2[0] - p1[0]) / (num_strings * 2)
+        dy = (p2[1] - p1[1]) / (num_strings * 2)
 
         for i in range(1, num_strings * 2, 2):
             x = p1[0] + i * dx
