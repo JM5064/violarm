@@ -13,7 +13,7 @@ from instrument.instrument_side import InstrumentSide
 
 load_dotenv()
 
-model = YOLO("best_maybe2.pt")
+model = YOLO("models/yolov11s_50_lr0.001.pt")
 
 front_cap = video.Video(0)
 ip = os.environ.get('IP')
@@ -175,6 +175,9 @@ while True:
         print(f'Note value(s) {notes} played on string(s) {strings}')
         print(string_note_freqs)
         print("---------")
+    else:
+        for i in range(violin.num_strings):
+            violin.remove_note(i)
 
 
     end = time.time()
