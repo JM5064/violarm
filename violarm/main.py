@@ -31,6 +31,7 @@ e_string = InstrumentString(659, 2637)
 
 violin_strings = [g_string, d_string, a_string, e_string]
 violin = Instrument(violin_strings)
+fret_fractions = a_string.calculate_fret_fractions()
 
 violin.start()
 
@@ -72,6 +73,7 @@ def draw_strings(frame, arm_keypoints, num_strings):
         return frame
     
     top_left, top_right, bottom_right, bottom_left = arm_keypoints
+
     top_points, bottom_points = instrument_front.get_string_baseline_points(
         top_left, top_right, bottom_left, bottom_right, num_strings)
     
@@ -79,6 +81,15 @@ def draw_strings(frame, arm_keypoints, num_strings):
         top_x, top_y = int(top_points[i][0]), int(top_points[i][1])
         bottom_x, bottom_y = int(bottom_points[i][0]), int(bottom_points[i][1])
         cv2.line(frame, (top_x, top_y), (bottom_x, bottom_y), (0, 255, 0), 2)
+    
+    return frame
+
+
+def draw_frets(frame, arm_keypoints):
+    if len(arm_keypoints) != 4:
+        return frame
+    
+    top_left, top_right, bottom_right, bottom_left = arm_keypoints
     
     return frame
 
@@ -95,13 +106,11 @@ def process_frame(frame):
         if classes[i] == 0:
             # hand
             if len(hand_keypoints) == 0:
-                for keypoint in frame_keypoints[i]:
-                    hand_keypoints.append(keypoint)
+                hand_keypoints.extend(frame_keypoints[i])
         else:
             # arm
             if len(arm_keypoints) == 0:
-                for keypoint in frame_keypoints[i]:
-                    arm_keypoints.append(keypoint)
+                arm_keypoints.extend(frame_keypoints[i])
 
     return arm_keypoints, hand_keypoints
 
@@ -187,7 +196,6 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-default_time = 0.97 # milliseconds
 average_time = 1000 * (total_time / total_frames)
 print("Average time per frame: ", average_time, "ms")
 print(1000 / average_time, "fps")
