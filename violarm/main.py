@@ -13,7 +13,7 @@ from instrument.instrument_side import InstrumentSide
 
 load_dotenv()
 
-model = YOLO("models/yolov11s_50_lr0.001.pt")
+model = YOLO("models/best_maybe2.pt")
 
 front_cap = video.Video(0)
 ip = os.environ.get('IP')
@@ -90,6 +90,18 @@ def draw_frets(frame, arm_keypoints):
         return frame
     
     top_left, top_right, bottom_right, bottom_left = arm_keypoints
+
+    left_dx = bottom_left[0] - top_left[0]
+    left_dy = bottom_left[1] - top_left[1]
+    right_dx = bottom_right[0] - top_right[0]
+    right_dy = bottom_right[1] - top_right[1]
+    for fraction in fret_fractions:
+        left_x = int(left_dx * fraction + top_left[0])
+        left_y = int(left_dy * fraction + top_left[1])
+        right_x = int(right_dx * fraction + top_right[0])
+        right_y = int(right_dy * fraction + top_right[1])
+
+        cv2.line(frame, (left_x, left_y), (right_x, right_y), (255, 255, 0), 1)
     
     return frame
 
@@ -126,9 +138,10 @@ while True:
 
         front_arm_keypoints, front_hand_keypoints = process_frame(front_frame)
 
+        front_frame = draw_frets(front_frame, front_arm_keypoints)
         front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
-        front_frame = draw_hand_points(front_frame, front_hand_keypoints)
         front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings)
+        front_frame = draw_hand_points(front_frame, front_hand_keypoints)
 
         cv2.imshow("Front Frame", front_frame)
 
