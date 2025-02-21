@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 from dotenv import load_dotenv
+import multiprocessing
 import os
 import time
 
@@ -35,9 +36,6 @@ fret_fractions = a_string.calculate_fret_fractions()
 
 violin.start()
 
-
-total_time = 0
-total_frames = 0
 
 
 def predict(frame):
@@ -127,94 +125,110 @@ def process_frame(frame):
     return arm_keypoints, hand_keypoints
 
 
-while True:
-    start = time.time()
+def get_playing_notes(front_hand_keypoints, side_hand_keypoints):
+    # get notes pressed
+    pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
+    strings, notes = instrument_front.get_notes(pressed_fingers, violin.num_strings)
 
-    if front_cap.isOpened():
-        front_frame = front_cap.read()
+    string_notes = [[] for _ in range(violin.num_strings)]
+    for i in range(len(strings)):
+        string_notes[strings[i]].append(notes[i])
 
-        if front_frame is None:
+    # get highest notes for each string and convert into frequencies
+    string_note_freqs = [InstrumentString.get_playing_note(notes) for notes in string_notes]
+    for i in range(violin.num_strings):
+        if string_note_freqs[i] is None:
             continue
 
-        front_arm_keypoints, front_hand_keypoints = process_frame(front_frame)
+        string_note_freqs[i] = violin_strings[i].to_frequency(string_note_freqs[i].item())
 
-        front_frame = draw_frets(front_frame, front_arm_keypoints)
-        front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
-        front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings)
-        front_frame = draw_hand_points(front_frame, front_hand_keypoints)
-
-        cv2.imshow("Front Frame", front_frame)
-
-    if side_cap.isOpened():
-        side_frame = side_cap.read()
-
-        if side_frame is None:
-            continue
-        
-        side_frame = cv2.resize(side_frame, (960, 720))
-
-        side_arm_keypoints, side_hand_keypoints = process_frame(side_frame)
-
-        side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
-        side_frame = draw_hand_points(side_frame, side_hand_keypoints)
-
-        cv2.imshow("Side Frame", side_frame)
-
-    if (front_cap.isOpened() and side_cap.isOpened() and
-        len(front_arm_keypoints) > 0 and len(front_hand_keypoints) > 0 and
-        len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
+    return string_note_freqs
 
 
-        instrument_front.keypoints = front_arm_keypoints
-        instrument_side.keypoints = side_arm_keypoints
-
-        pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
-        string_notes = [[] for _ in range(violin.num_strings)]
-        
-        strings, notes = instrument_front.get_notes(pressed_fingers, violin.num_strings)
-
-        for i in range(len(strings)):
-            string_notes[strings[i]].append(notes[i])
-
-        string_note_freqs = [InstrumentString.get_playing_note(notes) for notes in string_notes]
-        for i in range(violin.num_strings):
+def play_notes(string_note_freqs):
+    for i in range(violin.num_strings):
+        if violin.is_playing(i):
             if string_note_freqs[i] is None:
+                violin.remove_note(i)
+            else:
+                violin.update_note(i, string_note_freqs[i])
+        else:
+            if string_note_freqs[i] is not None:
+                violin.add_note(i, string_note_freqs[i])
+
+
+if __name__ == '__main__':
+    total_time = 0
+    total_frames = 0
+
+    while True:
+        start = time.time()
+
+        if front_cap.isOpened():
+            front_frame = front_cap.read()
+
+            if front_frame is None:
                 continue
 
-            string_note_freqs[i] = violin_strings[i].to_frequency(string_note_freqs[i].item())
+            front_arm_keypoints, front_hand_keypoints = process_frame(front_frame)
 
-        for i in range(violin.num_strings):
-            if violin.is_playing(i):
-                if string_note_freqs[i] is None:
-                    violin.remove_note(i)
-                else:
-                    violin.update_note(i, string_note_freqs[i])
-            else:
-                if string_note_freqs[i] is not None:
-                    violin.add_note(i, string_note_freqs[i])
+            front_frame = draw_frets(front_frame, front_arm_keypoints)
+            front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
+            front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings)
+            front_frame = draw_hand_points(front_frame, front_hand_keypoints)
+
+            cv2.imshow("Front Frame", front_frame)
+
+        if side_cap.isOpened():
+            side_frame = side_cap.read()
+
+            if side_frame is None:
+                continue
+            
+            side_frame = cv2.resize(side_frame, (960, 720))
+
+            side_arm_keypoints, side_hand_keypoints = process_frame(side_frame)
+
+            side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
+            side_frame = draw_hand_points(side_frame, side_hand_keypoints)
+
+            cv2.imshow("Side Frame", side_frame)
+
+        if (front_cap.isOpened() and side_cap.isOpened() and
+            len(front_arm_keypoints) > 0 and len(front_hand_keypoints) > 0 and
+            len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
+
+            # update object keypoints
+            instrument_front.keypoints = front_arm_keypoints
+            instrument_side.keypoints = side_arm_keypoints
+
+            # get playing notes
+            string_note_freqs = get_playing_notes(front_hand_keypoints, side_hand_keypoints)
+
+            # play notes
+            play_notes(string_note_freqs)
+
+            print(f'Notes played: {string_note_freqs}')
+
+        else:
+            # remove all notes if missing keypoints
+            for i in range(violin.num_strings):
+                violin.remove_note(i)
 
 
-        print(f'Note value(s) {notes} played on string(s) {strings}')
-        print(string_note_freqs)
-        print("---------")
-    else:
-        for i in range(violin.num_strings):
-            violin.remove_note(i)
+        end = time.time()
+        total_time += end - start
+        total_frames += 1
 
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-    end = time.time()
-    total_time += end - start
-    total_frames += 1
+    average_time = 1000 * (total_time / total_frames)
+    print("Average time per frame: ", average_time, "ms")
+    print(1000 / average_time, "fps")
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-average_time = 1000 * (total_time / total_frames)
-print("Average time per frame: ", average_time, "ms")
-print(1000 / average_time, "fps")
-
-violin.stop()
-front_cap.release()
-side_cap.release()
-cv2.destroyAllWindows()
+    violin.stop()
+    front_cap.release()
+    side_cap.release()
+    cv2.destroyAllWindows()
 
