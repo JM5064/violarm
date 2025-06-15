@@ -10,6 +10,16 @@ class InstrumentFront(InstrumentArm):
 
 
     def get_notes(self, fingers, num_strings):
+        """Gets the corresponding fractional notes given finger positions
+        args:
+            fingers: 
+            num_strings: int
+
+        returns:
+            strings:
+            notes: 
+        """
+
         if self.keypoints is None or len(self.keypoints) != 4:
             return
         
@@ -27,6 +37,7 @@ class InstrumentFront(InstrumentArm):
                 print("not in quad")
                 continue
 
+            # Find the closest string to each finger
             min_distance = float('inf')
             for i in range(num_strings):
                 distance = self.distance_to_line(finger, top_points[i], bottom_points[i])
@@ -37,6 +48,7 @@ class InstrumentFront(InstrumentArm):
                 else:
                     break
             
+            # Record the closest string, and calculate the closest fractional note
             strings.append(closest_string)
             notes.append(self.get_note_fraction(finger, top_points[closest_string], bottom_points[closest_string]))
             

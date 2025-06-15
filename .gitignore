@@ -166,3 +166,12 @@ cython_debug/
 /dataset
 /runs
 /points.csv
+/data
+/images_labeled
+/images_unlabeled
+/images_skipped
+/datasets
+yaml_dataset_arm_hand
+data.csv
+/models
+/tests
