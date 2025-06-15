@@ -7,7 +7,6 @@ import platform
 import os
 import time
 import torch
-import threading
 
 import video
 from instrument.instrument import Instrument
@@ -21,10 +20,11 @@ def load_model():
 
     if os_name == "Darwin":
         print("Using coreml")
-        return YOLO("models/best_maybe2.mlpackage", task="pose")
+        return YOLO("models/arm20.mlpackage", task="pose")
     else:
         print("Using pytorch")
-        return YOLO("models/arm20.pt", task="pose") 
+
+    return YOLO("models/arm20.pt", task="pose") 
 
 
 def initialize_mediapipe_hands(num_frames):
@@ -219,17 +219,6 @@ def main():
 
     violin.start()
 
-    def note_updater():
-        while True:
-            # Example: set a tone on voice 0
-            violin.notes[0] = (440, 0)  # A4
-            time.sleep(1.0)
-            violin.notes[0] = None
-            time.sleep(1.0)
-
-    thread = threading.Thread(target=note_updater, daemon=True)
-    thread.start()
-
     total_time = 0
     total_frames = 0
 
@@ -243,8 +232,6 @@ def main():
                 continue
 
             front_arm_keypoints, front_hand_keypoints = process_frame(model, hands_front, front_frame)
-            front_hand_keypoints = [torch.tensor([845.5428, 292.1303]), torch.tensor([803.6472, 366.7340]), torch.tensor([806.0197, 440.1074]), torch.tensor([829.0396, 540.9258])] 
-            front_arm_keypoints = [torch.tensor([758.9100,   7.9063]), torch.tensor([934.1591,  48.7383]), torch.tensor([871.1078, 749.7225]), torch.tensor([673.3136, 727.3831])] 
 
             front_frame = draw_frets(front_frame, front_arm_keypoints, fret_fractions)
             front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
@@ -262,8 +249,6 @@ def main():
             side_frame = cv2.resize(side_frame, (960, 540))
 
             side_arm_keypoints, side_hand_keypoints = process_frame(model, hands_side, side_frame)
-            side_hand_keypoints = [torch.tensor([201.1252, 181.8096]), torch.tensor([191.0820, 220.6266]),torch.tensor([197.6777, 258.7467]), torch.tensor([209.9090, 305.5587])]
-            side_arm_keypoints = [torch.tensor([118.0340,  33.4860]), torch.tensor([206.7139,  48.7311]), torch.tensor([130.4879, 413.7264]), torch.tensor([ 41.4677, 381.2008])]
 
             side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
             side_frame = draw_hand_points(side_frame, side_hand_keypoints)
@@ -273,10 +258,6 @@ def main():
         if (front_cap.isOpened() and side_cap.isOpened() and
             len(front_arm_keypoints) > 0 and len(front_hand_keypoints) > 0 and
             len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
-
-            print("front_hand_keypoints", front_hand_keypoints, type(front_hand_keypoints))
-            print("side_hand_keypoints", side_hand_keypoints, type(side_hand_keypoints))
-            print()
 
             # update object keypoints
             instrument_front.keypoints = front_arm_keypoints
