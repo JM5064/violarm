@@ -1,6 +1,5 @@
 import numpy as np
-import time
-import pyaudio
+import sounddevice as sd
 
 from instrument.instrument_string import InstrumentString
 
@@ -15,11 +14,10 @@ class Instrument:
         self.SAMPLE_RATE = 44100
         self.amplitude = amplitude
 
-        self.p = pyaudio.PyAudio()
         self.stream = None
 
 
-    def audio_callback(self, in_data, frame_count, time_info, status):
+    def audio_callback(self, outdata, frame_count, time_info, status):
         # np array representing times
         t = np.arange(frame_count) / self.SAMPLE_RATE
         audio = np.zeros(frame_count, dtype=np.float32)
@@ -35,28 +33,29 @@ class Instrument:
 
             self.notes[i] = (frequency, (phase + frame_count) % self.SAMPLE_RATE)
 
-        return (audio.tobytes(), pyaudio.paContinue)
+        outdata[:] = audio.reshape(-1, 1)
 
     
     def start(self) -> None:
         if self.stream is not None:
             return
         
-        # open pyaudio stream
-        self.stream = self.p.open(format=pyaudio.paFloat32,
-                                  channels=1,
-                                  rate=self.SAMPLE_RATE,
-                                  output=True,
-                                  stream_callback=self.audio_callback)
-        
-        self.stream.start_stream()
+        self.stream = sd.OutputStream(
+            samplerate=self.SAMPLE_RATE,
+            channels=1,
+            dtype='float32',
+            callback=self.audio_callback,
+            blocksize=2048,
+            latency='low'
+        )
+        self.stream.start()
 
     
     def stop(self) -> None:
         if self.stream is None:
             return
         
-        self.stream.stop_stream()
+        self.stream.stop()
         self.stream.close()
         self.stream = None
 

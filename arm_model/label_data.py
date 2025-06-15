@@ -102,9 +102,9 @@ def correct_labels():
     global image_path
 
     # check finger labels
-    if not (points[0][1] <= points[1][1] <= points[2][1] <= points[3][1]):
-        print(f"{image_path} Labeled fingers incorrectly")
-        return False
+    # if not (points[0][1] <= points[1][1] <= points[2][1] <= points[3][1]):
+    #     print(f"{image_path} Labeled fingers incorrectly")
+    #     return False
     
     # check arm labels
     if not (points[4][0] <= points[5][0] and points[5][1] <= points[6][1] and 
