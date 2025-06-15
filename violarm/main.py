@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import mediapipe as mp
 from dotenv import load_dotenv
-import multiprocessing
+import platform
 import os
 import time
 
@@ -12,36 +13,92 @@ from instrument.instrument_string import InstrumentString
 from instrument.instrument_front import InstrumentFront
 from instrument.instrument_side import InstrumentSide
 
-load_dotenv()
 
-model = YOLO("models/best_maybe2.pt")
+def load_model():
+    os_name = platform.system()
 
-front_cap = video.Video(0)
-ip = os.environ.get('IP')
-port = os.environ.get('PORT')
-url = f"http://{ip}:{port}/video"
-side_cap = video.Video(url)
-
-instrument_side = InstrumentSide(None, 20)
-instrument_front = InstrumentFront(None)
-
-g_string = InstrumentString(196, 784)
-d_string = InstrumentString(293, 1175)
-a_string = InstrumentString(440, 1760)
-e_string = InstrumentString(659, 2637)
-
-violin_strings = [g_string, d_string, a_string, e_string]
-violin = Instrument(violin_strings)
-fret_fractions = a_string.calculate_fret_fractions()
-
-violin.start()
+    if os_name == "Darwin":
+        print("Using coreml")
+        return YOLO("models/arm20.mlpackage", task="pose")
+    
+    print("Using pytorch")
+    return YOLO("models/arm20.pt", task="pose") 
 
 
+def initialize_mediapipe_hands(num_frames):
+    if num_frames > 2:
+        raise ValueError("Maximum 2 frames permitted")
+    
+    mp_hands = mp.solutions.hands
+    
+    hands = []
+    for _ in range(num_frames):
+        hand = mp_hands.Hands(
+            static_image_mode=False,
+            max_num_hands=1,
+            model_complexity=1,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
 
-def predict(frame):
-    results = model(frame, verbose=False)
+        hands.append(hand)
+
+    return hands
+
+
+def predict(model, frame):
+    results = model.predict(frame, verbose=False)
 
     return results
+
+
+def process_frame(arm_model, hand_model, frame):
+    """Processes a frame using Arm and Hand models
+    args:
+        arm_model: Model for processing arm keypoints
+        hand_model: Model for processing hand keypoints
+        frame: Frame to process
+
+    returns:
+        arm_keypoints: Tensor[] of [x, y] arm keypoints 
+        hand_keypoints: list[] of [x, y] hand keypoints
+    """
+
+    # Run arm model
+    arm_results = predict(arm_model, frame)
+
+    frame_keypoints = arm_results[0].keypoints.xy
+    classes = arm_results[0].boxes.cls
+
+    arm_keypoints = []
+    # Only pick the first arm detected
+    if len(classes) > 0:
+        arm_keypoints = frame_keypoints[0]
+
+    # Run hand model
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    hand_results = hand_model.process(rgb_frame)
+    height, width = frame.shape[:2]
+
+    hand_keypoints = []
+    if hand_results.multi_hand_landmarks:
+        # Only pick the first hand detected
+        hand_landmarks = hand_results.multi_hand_landmarks[0]
+
+        index = hand_landmarks.landmark[8]
+        middle = hand_landmarks.landmark[12]
+        ring = hand_landmarks.landmark[16]
+        pinky = hand_landmarks.landmark[20]
+        
+        # Unnormalize hand points
+        hand_keypoints.append([index.x * width, index.y * height])
+        hand_keypoints.append([middle.x * width, middle.y * height])
+        hand_keypoints.append([ring.x * width, ring.y * height])
+        hand_keypoints.append([pinky.x * width, pinky.y * height])
+    
+    print(arm_keypoints)
+    print(hand_keypoints)
+    return arm_keypoints, hand_keypoints
 
 
 def draw_arm_outline(frame, arm_keypoints):
@@ -66,7 +123,7 @@ def draw_hand_points(frame, hand_keypoints):
     return frame
 
 
-def draw_strings(frame, arm_keypoints, num_strings):
+def draw_strings(frame, arm_keypoints, num_strings, instrument_front):
     if len(arm_keypoints) != 4:
         return frame
     
@@ -83,7 +140,7 @@ def draw_strings(frame, arm_keypoints, num_strings):
     return frame
 
 
-def draw_frets(frame, arm_keypoints):
+def draw_frets(frame, arm_keypoints, fret_fractions):
     if len(arm_keypoints) != 4:
         return frame
     
@@ -104,28 +161,7 @@ def draw_frets(frame, arm_keypoints):
     return frame
 
 
-def process_frame(frame):
-    frame_results = predict(frame)
-    frame_keypoints = frame_results[0].keypoints.xy
-    classes = frame_results[0].boxes.cls
-
-    arm_keypoints = []
-    hand_keypoints = []
-
-    for i in range(len(classes)):
-        if classes[i] == 0:
-            # hand
-            if len(hand_keypoints) == 0:
-                hand_keypoints.extend(frame_keypoints[i])
-        else:
-            # arm
-            if len(arm_keypoints) == 0:
-                arm_keypoints.extend(frame_keypoints[i])
-
-    return arm_keypoints, hand_keypoints
-
-
-def get_playing_notes(front_hand_keypoints, side_hand_keypoints):
+def get_playing_notes(violin, instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints):
     # get notes pressed
     pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
     strings, notes = instrument_front.get_notes(pressed_fingers, violin.num_strings)
@@ -145,7 +181,7 @@ def get_playing_notes(front_hand_keypoints, side_hand_keypoints):
     return string_note_freqs
 
 
-def play_notes(string_note_freqs):
+def play_notes(violin: Instrument, string_note_freqs):
     for i in range(violin.num_strings):
         if violin.is_playing(i):
             if string_note_freqs[i] is None:
@@ -157,7 +193,32 @@ def play_notes(string_note_freqs):
                 violin.add_note(i, string_note_freqs[i])
 
 
-if __name__ == '__main__':
+def main():
+    load_dotenv()
+
+    model = load_model()
+    hands_front, hands_side = initialize_mediapipe_hands(2)
+
+    front_cap = video.Video(0)
+    ip = os.environ.get('IP')
+    port = os.environ.get('PORT')
+    url = f"http://{ip}:{port}/video"
+    side_cap = video.Video(url)
+
+    instrument_side = InstrumentSide(None, 20)
+    instrument_front = InstrumentFront(None)
+
+    g_string = InstrumentString(196, 784)
+    d_string = InstrumentString(293, 1175)
+    a_string = InstrumentString(440, 1760)
+    e_string = InstrumentString(659, 2637)
+
+    violin_strings = [g_string, d_string, a_string, e_string]
+    violin = Instrument(violin_strings)
+    fret_fractions = a_string.calculate_fret_fractions()
+
+    violin.start()
+
     total_time = 0
     total_frames = 0
 
@@ -170,11 +231,11 @@ if __name__ == '__main__':
             if front_frame is None:
                 continue
 
-            front_arm_keypoints, front_hand_keypoints = process_frame(front_frame)
+            front_arm_keypoints, front_hand_keypoints = process_frame(model, hands_front, front_frame)
 
-            front_frame = draw_frets(front_frame, front_arm_keypoints)
+            front_frame = draw_frets(front_frame, front_arm_keypoints, fret_fractions)
             front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
-            front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings)
+            front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings, instrument_front)
             front_frame = draw_hand_points(front_frame, front_hand_keypoints)
 
             cv2.imshow("Front Frame", front_frame)
@@ -185,9 +246,9 @@ if __name__ == '__main__':
             if side_frame is None:
                 continue
             
-            side_frame = cv2.resize(side_frame, (960, 720))
+            side_frame = cv2.resize(side_frame, (960, 540))
 
-            side_arm_keypoints, side_hand_keypoints = process_frame(side_frame)
+            side_arm_keypoints, side_hand_keypoints = process_frame(model, hands_side, side_frame)
 
             side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
             side_frame = draw_hand_points(side_frame, side_hand_keypoints)
@@ -203,10 +264,10 @@ if __name__ == '__main__':
             instrument_side.keypoints = side_arm_keypoints
 
             # get playing notes
-            string_note_freqs = get_playing_notes(front_hand_keypoints, side_hand_keypoints)
+            string_note_freqs = get_playing_notes(violin, instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
 
             # play notes
-            play_notes(string_note_freqs)
+            play_notes(violin, string_note_freqs)
 
             print(f'Notes played: {string_note_freqs}')
 
@@ -216,12 +277,14 @@ if __name__ == '__main__':
                 violin.remove_note(i)
 
 
-        end = time.time()
-        total_time += end - start
-        total_frames += 1
-
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+        end = time.time()
+        # print((end-start) * 1000)
+        if end - start < 1:
+            total_time += end - start
+            total_frames += 1
 
     average_time = 1000 * (total_time / total_frames)
     print("Average time per frame: ", average_time, "ms")
@@ -232,3 +295,6 @@ if __name__ == '__main__':
     side_cap.release()
     cv2.destroyAllWindows()
 
+
+if __name__ == '__main__':
+    main()
