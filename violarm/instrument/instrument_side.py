@@ -1,7 +1,6 @@
 from instrument.instrument_arm import InstrumentArm
 import numpy as np
 
-# TODO: time these methods to see whether class implementation is faster
 
 class InstrumentSide(InstrumentArm):
     def __init__(self, keypoints, distance_threshold):
@@ -9,7 +8,15 @@ class InstrumentSide(InstrumentArm):
         self.distance_threshold = distance_threshold
 
 
-    def get_pressed_fingers(self, front_fingers, side_fingers):
+    def get_pressed_fingers(self, front_fingers, side_fingers) -> list[list[float]]:
+        """Matches front_fingers with side_fingers to determine which fingers are pressed
+        args:
+            front_fingers: list[] of [x, y] coordinates of front_fingers
+            side_fingers: list[] of [x, y] coordinates of side_fingers
+        
+        returns:
+            list[] of [x, y] coordinates of pressed fingers
+        """
         if len(front_fingers) != len(side_fingers):
             return []
         
@@ -17,7 +24,16 @@ class InstrumentSide(InstrumentArm):
                 if self.is_pressed(side_fingers[i], self.distance_threshold)]
 
 
-    def is_pressed(self, finger, threshold):
+    def is_pressed(self, finger: list[float], threshold: int) -> bool:
+        """Detects if finger is pressed based on how close it is to the side arm
+        args:
+            finger: [x, y] coordinates of the finger
+            threshold: int, distance threshold for determining press
+        
+        returns:
+            Boolean indicating whether the finger is pressed
+        """
+
         if self.keypoints is None:
             return False
         

@@ -15,13 +15,13 @@ class InstrumentString:
 
     @staticmethod
     def get_playing_note(notes: list[float]) -> float | None:
-        '''Gets the highest note being pressed on the string
+        """Gets the highest note being pressed on the string
         args:
             notes: list[float] of note fractions or frequencies
 
         returns:
             highest_note: float
-        '''
+        """
         
         if len(notes) == 0:
             return None
@@ -78,6 +78,14 @@ class InstrumentString:
     
 
     def calculate_fret_fractions(self) -> list[float]:
+        """Calculates fractional note form for frequencies starting at A440
+        args:
+            None
+
+        returns:
+            fractions: list[float]
+        """
+
         frequencies = {
             "A4": 440,
             "A#4": 466.16,

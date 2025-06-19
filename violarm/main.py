@@ -15,6 +15,8 @@ from instrument.instrument_side import InstrumentSide
 
 
 def load_model():
+    """Loads the corresponding model based on operating system"""
+
     os_name = platform.system()
 
     if os_name == "Darwin":
@@ -25,7 +27,15 @@ def load_model():
     return YOLO("models/arm20.pt", task="pose") 
 
 
-def initialize_mediapipe_hands(num_frames):
+def initialize_mediapipe_hands(num_frames: int):
+    """Initializes mediapipe hands models
+    args:
+        num_frames: Number of hands models to initialize (one for each frame)
+
+    returns:
+        mp_hands: list[] of mediapipe hands
+    """
+
     if num_frames > 2:
         raise ValueError("Maximum 2 frames permitted")
     
@@ -46,12 +56,6 @@ def initialize_mediapipe_hands(num_frames):
     return hands
 
 
-def predict(model, frame):
-    results = model.predict(frame, verbose=False)
-
-    return results
-
-
 def process_frame(arm_model, hand_model, frame):
     """Processes a frame using Arm and Hand models
     args:
@@ -60,12 +64,12 @@ def process_frame(arm_model, hand_model, frame):
         frame: Frame to process
 
     returns:
-        arm_keypoints: Tensor[] of [x, y] arm keypoints 
+        arm_keypoints: list[] of [x, y] arm keypoints 
         hand_keypoints: list[] of [x, y] hand keypoints
     """
 
     # Run arm model
-    arm_results = predict(arm_model, frame)
+    arm_results = arm_model.predict(frame, verbose=False)
 
     frame_keypoints = arm_results[0].keypoints.xy
     classes = arm_results[0].boxes.cls
@@ -96,12 +100,22 @@ def process_frame(arm_model, hand_model, frame):
         hand_keypoints.append([ring.x * width, ring.y * height])
         hand_keypoints.append([pinky.x * width, pinky.y * height])
     
-    print(arm_keypoints)
-    print(hand_keypoints)
+    print("arm_keypoints", arm_keypoints)
+    print("hand_keypoints", hand_keypoints)
+    print()
     return arm_keypoints, hand_keypoints
 
 
 def draw_arm_outline(frame, arm_keypoints):
+    """Draws arm outline on frame
+    args:
+        frame: cv2 frame
+        arm_keypoints: list[] of [x, y] arm keypoints
+
+    returns:
+        frame: cv2 frame with arm keypoints drawn
+    """
+
     corners = []
     for point in arm_keypoints:
         x, y = int(point[0]), int(point[1])
@@ -116,6 +130,15 @@ def draw_arm_outline(frame, arm_keypoints):
 
 
 def draw_hand_points(frame, hand_keypoints):
+    """Draws hand keypoints on frame
+    args:
+        frame: cv2 frame
+        hand_keypoints: list[] of [x, y] hand keypoints
+
+    returns:
+        frame: cv2 frame with hand keypoints drawn
+    """
+
     for point in hand_keypoints:
         x, y = int(point[0]), int(point[1])
         cv2.circle(frame, (x, y), 3, (0, 0, 255), 3)
@@ -123,7 +146,18 @@ def draw_hand_points(frame, hand_keypoints):
     return frame
 
 
-def draw_strings(frame, arm_keypoints, num_strings, instrument_front):
+def draw_strings(frame, arm_keypoints, num_strings: int, instrument_front: InstrumentFront):
+    """Splits arm frame and draws num_strings strings
+    args:
+        frame: cv2 frame to draw on
+        arm_keypoints: list[] of [x, y] arm keypoints
+        num_strings: int
+        instrument_front: InstrumentFront for calculation
+    
+    returns:
+        frame: cv2 frame with strings drawn
+    """
+    
     if len(arm_keypoints) != 4:
         return frame
     
@@ -140,7 +174,17 @@ def draw_strings(frame, arm_keypoints, num_strings, instrument_front):
     return frame
 
 
-def draw_frets(frame, arm_keypoints, fret_fractions):
+def draw_frets(frame, arm_keypoints, fret_fractions: list[float]):
+    """Draws frets as specified by fret_fractions
+    args:
+        frame: cv2 frame to draw on
+        arm_keypoints: list[] of [x, y] arm keypoints
+        fret_fractions: list[float] of fractional notes
+
+    returns:
+        frame: cv2 frame with frets drawn
+    """
+
     if len(arm_keypoints) != 4:
         return frame
     
@@ -161,18 +205,36 @@ def draw_frets(frame, arm_keypoints, fret_fractions):
     return frame
 
 
-def get_playing_notes(violin, instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints):
+def get_playing_notes(
+        instrument_front: InstrumentFront, 
+        instrument_side: InstrumentSide, 
+        violin_strings: list[InstrumentString], 
+        front_hand_keypoints: list[list[float]], 
+        side_hand_keypoints: list[list[float]]
+    ) -> list[int | None]:
+    """Calculate notes being played on each string
+    args:
+        instrument_front: InstrumentFront, for getting notes pressed
+        instrument_side: InstrumentSide, for getting notes pressed
+        violin_strings: list[InstrumentString], for getting note frequencies
+        front_hand_keypoints: list[list[float]], for getting notes pressed
+        side_hand_keypoints: list[list[float]], for getting notes pressed
+
+    returns:
+        string_note_freqs: list[int | None] of frequencies being played on each string
+    """
+
     # get notes pressed
     pressed_fingers = instrument_side.get_pressed_fingers(front_hand_keypoints, side_hand_keypoints)
-    strings, notes = instrument_front.get_notes(pressed_fingers, violin.num_strings)
+    strings, notes = instrument_front.get_notes(pressed_fingers, len(violin_strings))
 
-    string_notes = [[] for _ in range(violin.num_strings)]
+    string_notes = [[] for _ in range(len(violin_strings))]
     for i in range(len(strings)):
         string_notes[strings[i]].append(notes[i])
 
     # get highest notes for each string and convert into frequencies
     string_note_freqs = [InstrumentString.get_playing_note(notes) for notes in string_notes]
-    for i in range(violin.num_strings):
+    for i in range(len(violin_strings)):
         if string_note_freqs[i] is None:
             continue
 
@@ -181,7 +243,16 @@ def get_playing_notes(violin, instrument_front, instrument_side, violin_strings,
     return string_note_freqs
 
 
-def play_notes(violin: Instrument, string_note_freqs):
+def play_notes(violin: Instrument, string_note_freqs: list[int | None]) -> None:
+    """Plays notes on instrument
+    args:
+        violin: Intrument
+        string_note_freqs: list[int | None] of the current frequency of each string
+
+    returns:
+        None
+    """
+
     for i in range(violin.num_strings):
         if violin.is_playing(i):
             if string_note_freqs[i] is None:
@@ -264,7 +335,7 @@ def main():
             instrument_side.keypoints = side_arm_keypoints
 
             # get playing notes
-            string_note_freqs = get_playing_notes(violin, instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
+            string_note_freqs = get_playing_notes(instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
 
             # play notes
             play_notes(violin, string_note_freqs)
