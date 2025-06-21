@@ -1,3 +1,4 @@
+import math
 
 class InstrumentString:
     
@@ -76,6 +77,21 @@ class InstrumentString:
 
         return fraction
     
+
+    @staticmethod
+    def freq_to_midi(note_frequency: float) -> int:
+        """Converts frequency to nearest midi note
+        args:
+            note_frequency: float
+
+        returns:
+            midi_note: int
+        """
+
+        midi_note = 12 * (math.log(note_frequency / 220) / math.log(2)) + 57
+
+        return round(midi_note)
+
 
     def calculate_fret_fractions(self) -> list[float]:
         """Calculates fractional note form for frequencies starting at A440

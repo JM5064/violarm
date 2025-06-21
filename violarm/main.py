@@ -100,9 +100,6 @@ def process_frame(arm_model, hand_model, frame):
         hand_keypoints.append([ring.x * width, ring.y * height])
         hand_keypoints.append([pinky.x * width, pinky.y * height])
     
-    print("arm_keypoints", arm_keypoints)
-    print("hand_keypoints", hand_keypoints)
-    print()
     return arm_keypoints, hand_keypoints
 
 
@@ -285,7 +282,7 @@ def main():
     e_string = InstrumentString(659, 2637)
 
     violin_strings = [g_string, d_string, a_string, e_string]
-    violin = Instrument(violin_strings)
+    violin = Instrument(violin_strings, "violarm/instrument/violin.sf2")
     fret_fractions = a_string.calculate_fret_fractions()
 
     violin.start()
