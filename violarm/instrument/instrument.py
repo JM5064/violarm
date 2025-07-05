@@ -5,20 +5,23 @@ from instrument.instrument_string import InstrumentString
 
 class Instrument:
 
-    def __init__(self, strings: list[InstrumentString], soundfont_path: str):
+    def __init__(self, strings: list[InstrumentString], soundfont_path: str, preset=0, volume=30):
         self.strings = strings
         self.num_strings = len(strings)
         self.notes = [None] * self.num_strings
-        self.soundfont_path = soundfont_path
 
         self.fs = fluidsynth.Synth()
+        self.soundfont_path = soundfont_path
+        self.preset = preset
+        self.volume = volume
 
     
     def start(self) -> None:
+        self.fs.setting("synth.gain", 2.0)
         self.fs.start()
 
         sfid = self.fs.sfload(self.soundfont_path)
-        self.fs.program_select(0, sfid, 0, 0)
+        self.fs.program_select(0, sfid, 0, self.preset)
 
     
     def stop(self) -> None:
@@ -29,7 +32,7 @@ class Instrument:
         self.notes[string_num] = frequency
 
         midi_note = InstrumentString.freq_to_midi(frequency)
-        self.fs.noteon(0, midi_note, 30)
+        self.fs.noteon(0, midi_note, self.volume)
 
     
     def remove_note(self, string_num: int) -> None:

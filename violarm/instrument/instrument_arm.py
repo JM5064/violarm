@@ -3,6 +3,10 @@ import numpy as np
 
 class InstrumentArm(ABC):
 
+    def __init__(self, keypoints):
+        self.keypoints = keypoints
+
+
     def distance(self, p1, p2):
         return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
             
@@ -58,4 +62,8 @@ class InstrumentArm(ABC):
         point_triangle_sum = triangle_area(a, b, p) + triangle_area(b, p, c) + triangle_area(c, p, d) + triangle_area(d, p, a)
 
         return abs(quadrilateral_area - point_triangle_sum) < 0.1
+    
+
+    def set_keypoints(self, keypoints):
+        self.keypoints = keypoints
 

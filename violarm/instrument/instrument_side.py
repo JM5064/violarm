@@ -4,7 +4,7 @@ import numpy as np
 
 class InstrumentSide(InstrumentArm):
     def __init__(self, keypoints, distance_threshold):
-        self.keypoints = keypoints        
+        super().__init__(keypoints)
         self.distance_threshold = distance_threshold
 
 

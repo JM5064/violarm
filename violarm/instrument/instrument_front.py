@@ -4,8 +4,9 @@ import numpy as np
 
 class InstrumentFront(InstrumentArm):
 
-    def __init__(self, keypoints):
-        self.keypoints = keypoints
+    def __init__(self, keypoints, fingerboard_extension_multiplier=1):
+        super().__init__(keypoints)
+        self.fingerboard_extension_multiplier = fingerboard_extension_multiplier
 
 
     def get_notes(self, fingers: list[list[float]], num_strings: int) -> tuple[list[int], list[float]]:
@@ -53,7 +54,35 @@ class InstrumentFront(InstrumentArm):
             notes.append(self.get_note_fraction(finger, top_points[closest_string], bottom_points[closest_string]))
             
         return strings, notes
+    
+
+    def get_extended_fingerboard_keypoints(self):
+        """Extends fingerboard by moving down bottom arm keypoints
+        args:
+            None
+
+        returns:
+            top_left, top_right, and new bottom_right, bottom_left keypoints
+        """
+
+        # Check that there are 4 arm keypoints
+        if self.keypoints is None or len(self.keypoints) != 4:
+            return self.keypoints
         
+        top_left, top_right, bottom_right, bottom_left = self.keypoints
+
+        # Calculate the differences in x, y between top and bottom points
+        rightdx = bottom_right[0] - top_right[0]
+        rightdy = bottom_right[1] - top_right[1]
+
+        leftdx = bottom_left[0] - top_left[0]
+        leftdy = bottom_left[1] - top_left[1]
+
+        new_bottom_right  = [top_right[0] + rightdx * self.fingerboard_extension_multiplier, top_right[1] + rightdy * self.fingerboard_extension_multiplier]
+        new_bottom_left = [top_left[0] + leftdx * self.fingerboard_extension_multiplier, top_left[1] + leftdy * self.fingerboard_extension_multiplier]
+
+        return top_left, top_right, new_bottom_right, new_bottom_left
+
 
     def divide_baseline(self, p1, p2, num_strings: int) -> list[list[float]]:
         """Divides line between p1 and p2 evenly into num_strings strings
@@ -112,3 +141,9 @@ class InstrumentFront(InstrumentArm):
 
         return np.linalg.norm(projected_vector) / self.distance(line_p1, line_p2)
 
+
+    def set_keypoints(self, keypoints):
+        super().set_keypoints(keypoints)
+
+        self.keypoints = self.get_extended_fingerboard_keypoints()
+    

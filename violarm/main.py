@@ -182,7 +182,7 @@ def draw_frets(frame, arm_keypoints, fret_fractions: list[float]):
         frame: cv2 frame with frets drawn
     """
 
-    if len(arm_keypoints) != 4:
+    if arm_keypoints is None or len(arm_keypoints) != 4:
         return frame
     
     top_left, top_right, bottom_right, bottom_left = arm_keypoints
@@ -274,7 +274,7 @@ def main():
     side_cap = video.Video(url)
 
     instrument_side = InstrumentSide(None, 20)
-    instrument_front = InstrumentFront(None)
+    instrument_front = InstrumentFront(None, 1.4)
 
     g_string = InstrumentString(196, 784)
     d_string = InstrumentString(293, 1175)
@@ -282,7 +282,7 @@ def main():
     e_string = InstrumentString(659, 2637)
 
     violin_strings = [g_string, d_string, a_string, e_string]
-    violin = Instrument(violin_strings, "violarm/instrument/violin.sf2")
+    violin = Instrument(violin_strings, "tests/Sonatina_Symphonic_Orchestra.sf2", preset=12, volume=120)
     fret_fractions = a_string.calculate_fret_fractions()
 
     violin.start()
@@ -300,8 +300,9 @@ def main():
                 continue
 
             front_arm_keypoints, front_hand_keypoints = process_frame(model, hands_front, front_frame)
+            instrument_front.set_keypoints(front_arm_keypoints)
 
-            front_frame = draw_frets(front_frame, front_arm_keypoints, fret_fractions)
+            front_frame = draw_frets(front_frame, instrument_front.keypoints, fret_fractions)
             front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
             front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings, instrument_front)
             front_frame = draw_hand_points(front_frame, front_hand_keypoints)
@@ -317,6 +318,7 @@ def main():
             side_frame = cv2.resize(side_frame, (960, 540))
 
             side_arm_keypoints, side_hand_keypoints = process_frame(model, hands_side, side_frame)
+            instrument_side.set_keypoints(side_arm_keypoints)
 
             side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
             side_frame = draw_hand_points(side_frame, side_hand_keypoints)
@@ -326,10 +328,6 @@ def main():
         if (front_cap.isOpened() and side_cap.isOpened() and
             len(front_arm_keypoints) > 0 and len(front_hand_keypoints) > 0 and
             len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
-
-            # update object keypoints
-            instrument_front.keypoints = front_arm_keypoints
-            instrument_side.keypoints = side_arm_keypoints
 
             # get playing notes
             string_note_freqs = get_playing_notes(instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
