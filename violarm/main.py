@@ -299,12 +299,17 @@ def main():
             if front_frame is None:
                 continue
 
+            # Get arm and hand keypoint predictions
             front_arm_keypoints, front_hand_keypoints = process_frame(model, hands_front, front_frame)
-            instrument_front.set_keypoints(front_arm_keypoints)
+
+            # Add to recent keypoints pool and use average set of keypoints
+            instrument_front.add_to_recent_keypoints(front_arm_keypoints, 5)
+            average_keypoints = instrument_front.get_average_keypoint_positions(front_arm_keypoints)
+            instrument_front.set_keypoints(average_keypoints)
 
             front_frame = draw_frets(front_frame, instrument_front.keypoints, fret_fractions)
-            front_frame = draw_arm_outline(front_frame, front_arm_keypoints)
-            front_frame = draw_strings(front_frame, front_arm_keypoints, violin.num_strings, instrument_front)
+            front_frame = draw_arm_outline(front_frame, average_keypoints)
+            front_frame = draw_strings(front_frame, average_keypoints, violin.num_strings, instrument_front)
             front_frame = draw_hand_points(front_frame, front_hand_keypoints)
 
             cv2.imshow("Front Frame", front_frame)
@@ -317,8 +322,13 @@ def main():
             
             side_frame = cv2.resize(side_frame, (960, 540))
 
+            # Get arm and hand keypoint predictions
             side_arm_keypoints, side_hand_keypoints = process_frame(model, hands_side, side_frame)
-            instrument_side.set_keypoints(side_arm_keypoints)
+
+            # Add to recent keypoints pool and use average set of keypoints
+            instrument_side.add_to_recent_keypoints(side_arm_keypoints, 3)
+            average_keypoints = instrument_side.get_average_keypoint_positions(side_arm_keypoints)
+            instrument_side.set_keypoints(average_keypoints)
 
             side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
             side_frame = draw_hand_points(side_frame, side_hand_keypoints)
