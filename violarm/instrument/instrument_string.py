@@ -91,6 +91,21 @@ class InstrumentString:
         midi_note = 12 * (math.log(note_frequency / 220) / math.log(2)) + 57
 
         return round(midi_note)
+    
+
+    @staticmethod
+    def midi_to_freq(midi_note: int) -> float:
+        """Converts midi note to note frequency
+        args:
+            midi_note: int
+        
+        returns:
+            note_frequency: int
+        """
+
+        note_frequency = math.ceil(math.exp(math.log(2) * (midi_note - 57) / 12) * 220)
+
+        return note_frequency
 
 
     def calculate_fret_fractions(self) -> list[float]:
