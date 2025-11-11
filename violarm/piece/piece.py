@@ -1,21 +1,41 @@
 from piece.fingering_manager import FingeringManager
+from piece.note import Note
 
 
 class Piece:
 
-    def __init__(self, notes):
-        self.notes = notes
-        self.current_note = 0
+    def __init__(self, notes: list[Note]):
+        self.notes = notes   
+        self.current_note = None
+        self.initialized = False
+
+        self.gen = self.note_gen() 
+
+
+    def note_gen(self):
+        while True:
+            for note in self.notes:
+                yield note
+
+            yield None
+
+        
+    def start(self):
+        self.initialized = True
+        self.next_note()
 
 
     def next_note(self):
-        if self.current_note == len(self.notes):
-            # Reset current note to 0
-            self.current_note = 0
+        """Returns the next note"""
 
-            return None
+        self.current_note = next(self.gen)
+
+        return self.current_note
+    
+
+    def reset_piece(self):
+        """Resets note generator"""
         
-        self.current_note += 1
-
-        return self.notes[self.current_note]
+        self.gen = self.note_gen()
+        self.current_note = None
 
