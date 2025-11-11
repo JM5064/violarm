@@ -121,7 +121,7 @@ def get_playing_notes(
         side_hand_keypoints: list[list[float]], for getting notes pressed
 
     returns:
-        string_note_freqs: list[int | None] of frequencies being played on each string
+        string_note_midis: list[int | None] of midi values being played on each string
     """
 
     # get notes pressed
@@ -133,21 +133,21 @@ def get_playing_notes(
         string_notes[strings[i]].append(notes[i])
 
     # get highest notes for each string and convert into frequencies
-    string_note_freqs = [InstrumentString.get_playing_note(notes) for notes in string_notes]
+    string_note_midis = [InstrumentString.get_playing_note(notes) for notes in string_notes]
     for i in range(len(violin_strings)):
-        if string_note_freqs[i] is None:
+        if string_note_midis[i] is None:
             continue
 
-        string_note_freqs[i] = violin_strings[i].fraction_to_freq(string_note_freqs[i].item())
+        string_note_midis[i] = violin_strings[i].fraction_to_midi(string_note_midis[i].item())
 
-    return string_note_freqs
+    return string_note_midis
 
 
 def play_notes(violin: Instrument, string_note_midis: list[int | None]) -> None:
     """Plays notes on instrument
     args:
         violin: Intrument
-        string_note_freqs: list[int | None] of the current frequency of each string
+        string_note_midis: list[int | None] of the current midi values being played on each string
 
     returns:
         None
@@ -248,16 +248,12 @@ def main():
             len(side_arm_keypoints) > 0 and len(side_hand_keypoints) > 0):
 
             # get playing notes
-            string_note_freqs = get_playing_notes(instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
-            string_note_midis = [InstrumentString.freq_to_midi(freq) for freq in string_note_freqs]
+            string_note_midis = get_playing_notes(instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
 
             # play notes
-            play_notes(violin, string_note_freqs)
+            play_notes(violin, string_note_midis)
 
             # maybe here, method to check if playing note is the current target note. if so, go to next note
-            # print(piece.current_note.freq, string_note_freqs)
-            # NEED TO MAKE SURE piece.current_note.freq and string_note_freqs are ROUNDED
-            # Convert string_note_freqs to midi? then compare midi values
             # for drawing: midi -> freq -> fraction
             if piece.current_note and piece.current_note.midi_note in string_note_midis:
                 next_note = piece.next_note()
