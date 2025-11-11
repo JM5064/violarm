@@ -1,7 +1,5 @@
-from .piece_adder import PieceAdder
-from .piece import FingeringManager
 from .piece import Piece
-from .piece import Note
+from .fingering_manager import FingeringManager
 from instrument.instrument import Instrument
 from instrument.instrument_string import InstrumentString
 import json
@@ -26,7 +24,7 @@ class PieceLoader:
 
         # in main: target note: if curr playing note = target note, target note = next note, switch visual indicator
 
-        pieces_data_path = "piece/pieces.json"
+        pieces_data_path = "violarm/piece/pieces.json"
 
         pieces_data = json.load(open(pieces_data_path, "r"))
 

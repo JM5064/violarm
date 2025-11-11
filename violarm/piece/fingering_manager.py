@@ -91,8 +91,8 @@ class FingeringManager:
 
 
         # Debug print costs for each of the last notes
-        for note in possible_notes[-1]:
-            print(notes_map[note]["cost"])
+        # for note in possible_notes[-1]:
+        #     print(notes_map[note]["cost"])
 
         # Get the best fingering path
         best_last_note = min(possible_notes[-1], key=lambda note: notes_map[note]["cost"])

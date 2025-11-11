@@ -30,7 +30,7 @@ class InstrumentString:
         return max(notes)
 
 
-    def to_frequency(self, note_fraction: float) -> float:
+    def fraction_to_freq(self, note_fraction: float) -> float:
         """Converts fractional note form to frequency
         args: 
             note_fraction: float
@@ -56,7 +56,7 @@ class InstrumentString:
         return frequency
 
         
-    def to_fraction(self, note_frequency: float) -> float:
+    def freq_to_fraction(self, note_frequency: float) -> float:
         """Converts frequency to fractional note form
         args:
             note_frequency: float
@@ -76,6 +76,30 @@ class InstrumentString:
         fraction = (self.string_length - new_length) / self.string_length
 
         return fraction
+    
+
+    def fraction_to_midi(self, note_fraction: float) -> int:
+        """Converts fractional note form to nearest midi note
+        args:
+            note_fraction: float
+
+        returns:
+            midi_note: int
+        """
+         
+        return InstrumentString.freq_to_midi(self.fraction_to_freq(note_fraction))
+    
+
+    def midi_to_fraction(self, midi_note: int) -> float:
+        """Converts midi note to fractional note form
+        args:
+            midi_note: int
+
+        returns:
+            fraction: float
+        """
+
+        return self.freq_to_fraction(InstrumentString.midi_to_freq(midi_note))
     
 
     @staticmethod
@@ -147,6 +171,7 @@ class InstrumentString:
             "B6": 1975.53
         }
 
-        fractions = [self.to_fraction(freq) for freq in frequencies.values()]
+        # fractions = [self.freq_to_fraction(freq) for freq in frequencies.values()]
+        fractions = [self.midi_to_fraction(midi_note) for midi_note in range(69, 96)]
 
         return fractions

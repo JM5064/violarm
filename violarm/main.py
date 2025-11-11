@@ -9,6 +9,7 @@ import time
 
 import video
 from drawing import draw_arm_outline, draw_hand_points, draw_strings, draw_frets
+from piece.piece_loader import PieceLoader 
 from instrument.instrument import Instrument
 from instrument.instrument_string import InstrumentString
 from instrument.instrument_front import InstrumentFront
@@ -137,12 +138,12 @@ def get_playing_notes(
         if string_note_freqs[i] is None:
             continue
 
-        string_note_freqs[i] = violin_strings[i].to_frequency(string_note_freqs[i].item())
+        string_note_freqs[i] = violin_strings[i].fraction_to_freq(string_note_freqs[i].item())
 
     return string_note_freqs
 
 
-def play_notes(violin: Instrument, string_note_freqs: list[int | None]) -> None:
+def play_notes(violin: Instrument, string_note_midis: list[int | None]) -> None:
     """Plays notes on instrument
     args:
         violin: Intrument
@@ -154,13 +155,13 @@ def play_notes(violin: Instrument, string_note_freqs: list[int | None]) -> None:
 
     for i in range(violin.num_strings):
         if violin.is_playing(i):
-            if string_note_freqs[i] is None:
+            if string_note_midis[i] is None:
                 violin.remove_note(i)
             else:
-                violin.update_note(i, string_note_freqs[i])
+                violin.update_note(i, string_note_midis[i])
         else:
-            if string_note_freqs[i] is not None:
-                violin.add_note(i, string_note_freqs[i])
+            if string_note_midis[i] is not None:
+                violin.add_note(i, string_note_midis[i])
 
 
 def main():
@@ -188,6 +189,11 @@ def main():
     fret_fractions = a_string.calculate_fret_fractions()
 
     violin.start()
+
+    piece_loader = PieceLoader(violin)
+    piece = piece_loader.load_piece("Maple Leaf Rag", "Scott Joplin")
+    piece.start()
+    print("CURRENT NOTE:", piece.current_note.midi_note)
 
     total_time = 0
     total_frames = 0
@@ -243,11 +249,21 @@ def main():
 
             # get playing notes
             string_note_freqs = get_playing_notes(instrument_front, instrument_side, violin_strings, front_hand_keypoints, side_hand_keypoints)
+            string_note_midis = [InstrumentString.freq_to_midi(freq) for freq in string_note_freqs]
 
             # play notes
             play_notes(violin, string_note_freqs)
 
-            print(f'Notes played: {string_note_freqs}')
+            # maybe here, method to check if playing note is the current target note. if so, go to next note
+            # print(piece.current_note.freq, string_note_freqs)
+            # NEED TO MAKE SURE piece.current_note.freq and string_note_freqs are ROUNDED
+            # Convert string_note_freqs to midi? then compare midi values
+            # for drawing: midi -> freq -> fraction
+            if piece.current_note and piece.current_note.midi_note in string_note_midis:
+                next_note = piece.next_note()
+                print("CURRENT NOTE SWITCHED TO ", next_note.midi_note)
+
+            print(f'Notes played: {string_note_midis}')
 
         else:
             # remove all notes if missing keypoints

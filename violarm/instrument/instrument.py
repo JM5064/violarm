@@ -28,10 +28,9 @@ class Instrument:
         self.fs.delete()
 
 
-    def add_note(self, string_num: int, frequency: int) -> None:
-        self.notes[string_num] = frequency
+    def add_note(self, string_num: int, midi_note: int) -> None:
+        self.notes[string_num] = midi_note
 
-        midi_note = InstrumentString.freq_to_midi(frequency)
         self.fs.noteon(0, midi_note, self.volume)
 
     
@@ -40,21 +39,20 @@ class Instrument:
             return
         
         current_note = self.notes[string_num]
-        midi_note = InstrumentString.freq_to_midi(current_note)
-        self.fs.noteoff(0, midi_note)
+        self.fs.noteoff(0, current_note)
         
         self.notes[string_num] = None
 
     
-    def update_note(self, string_num: int, frequency: int) -> None:
+    def update_note(self, string_num: int, midi_note: int) -> None:
         if self.notes[string_num] is None:
             return
         
-        if InstrumentString.freq_to_midi(self.notes[string_num]) == InstrumentString.freq_to_midi(frequency):
+        if self.notes[string_num] == midi_note:
             return
         
         self.remove_note(string_num)
-        self.add_note(string_num, frequency)
+        self.add_note(string_num, midi_note)
 
 
     def is_playing(self, string_num: int) -> bool:
