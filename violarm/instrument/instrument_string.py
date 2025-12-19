@@ -132,6 +132,25 @@ class InstrumentString:
         return note_frequency
 
 
+    @staticmethod
+    def midi_to_note_name(midi_note: int) -> str:
+        """Converts midi note to note name
+        args:
+            midi_note: int
+        
+        returns:
+            note_name: str
+        """
+
+        note_names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+
+        # Middle C = 60 = C4
+        note_name_index = midi_note % 12
+        note_octave = midi_note // 12 - 1
+
+        return note_names[note_name_index] + str(note_octave)
+
+
     def calculate_fret_fractions(self) -> list[float]:
         """Calculates fractional note form for frequencies starting at A440
         args:
