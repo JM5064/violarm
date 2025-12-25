@@ -8,7 +8,7 @@ import os
 import time
 
 import video
-from drawing import draw_arm_outline, draw_hand_points, draw_strings, draw_frets
+from drawing import draw_arm_outline, draw_hand_points, draw_strings, draw_frets, draw_target_note
 from piece.piece_loader import PieceLoader 
 from instrument.instrument import Instrument
 from instrument.instrument_string import InstrumentString
@@ -116,7 +116,7 @@ def get_playing_notes(
     args:
         instrument_front: InstrumentFront, for getting notes pressed
         instrument_side: InstrumentSide, for getting notes pressed
-        violin_strings: list[InstrumentString], for getting note frequencies
+        violin_strings: list[InstrumentString], for getting midi notes
         front_hand_keypoints: list[list[float]], for getting notes pressed
         side_hand_keypoints: list[list[float]], for getting notes pressed
 
@@ -132,7 +132,7 @@ def get_playing_notes(
     for i in range(len(strings)):
         string_notes[strings[i]].append(notes[i])
 
-    # get highest notes for each string and convert into frequencies
+    # get highest notes for each string and convert into midi values
     string_note_midis = [InstrumentString.get_playing_note(notes) for notes in string_notes]
     for i in range(len(violin_strings)):
         if string_note_midis[i] is None:
@@ -164,6 +164,40 @@ def play_notes(violin: Instrument, string_note_midis: list[int | None]) -> None:
                 violin.add_note(i, string_note_midis[i])
 
 
+def calculate_string_points(arm_keypoints, num_strings: int, instrument_front: InstrumentFront):
+    """Calculates top (x, y), bottom (x, y) points of the strings
+    args:
+        arm_keypoints: list[] of [x, y] arm keypoints
+        num_strings: int
+        instrument_front: InstrumentFront for calculation
+    
+    returns:
+        string_points: list of points formatted 
+        [
+            [[top_x1, top_y1], [bot_x1, bot_y1]], 
+            [[top_x2, top_y2], [bot_x2, bot_y2]], 
+            ...
+        ]
+    """
+
+    if len(arm_keypoints) != 4:
+        return []
+    
+    top_left, top_right, bottom_right, bottom_left = arm_keypoints
+
+    top_points, bottom_points = instrument_front.get_string_baseline_points(
+        top_left, top_right, bottom_left, bottom_right, num_strings)
+        
+    string_points = []
+    for i in range(len(top_points)):
+        top_x, top_y = int(top_points[i][0]), int(top_points[i][1])
+        bottom_x, bottom_y = int(bottom_points[i][0]), int(bottom_points[i][1])
+
+        string_points.append(((top_x, top_y), (bottom_x, bottom_y)))
+    
+    return string_points
+
+
 def main():
     load_dotenv()
 
@@ -179,10 +213,10 @@ def main():
     instrument_side = InstrumentSide(None, 20)
     instrument_front = InstrumentFront(None, 1.39)
 
-    g_string = InstrumentString(196, 784)
-    d_string = InstrumentString(293, 1175)
-    a_string = InstrumentString(440, 1760)
-    e_string = InstrumentString(659, 2637)
+    g_string = InstrumentString(196, 784, name="G")
+    d_string = InstrumentString(293, 1175, name="D")
+    a_string = InstrumentString(440, 1760, name="A")
+    e_string = InstrumentString(659, 2637, name="E")
 
     violin_strings = [g_string, d_string, a_string, e_string]
     violin = Instrument(violin_strings, "violarm/instrument/Sonatina_Symphonic_Orchestra.sf2", preset=12, volume=120)
@@ -193,7 +227,6 @@ def main():
     piece_loader = PieceLoader(violin)
     piece = piece_loader.load_piece("Maple Leaf Rag", "Scott Joplin")
     piece.start()
-    print("CURRENT NOTE:", piece.current_note.midi_note)
 
     total_time = 0
     total_frames = 0
@@ -215,9 +248,14 @@ def main():
             average_keypoints = instrument_front.get_average_keypoint_positions(front_arm_keypoints)
             instrument_front.set_keypoints(average_keypoints)
 
+            # Calculate string points
+            string_points = calculate_string_points(average_keypoints, violin.num_strings, instrument_front)
+
+            # Draw overlays
             front_frame = draw_frets(front_frame, instrument_front.keypoints, fret_fractions)
             front_frame = draw_arm_outline(front_frame, average_keypoints)
-            front_frame = draw_strings(front_frame, average_keypoints, violin.num_strings, instrument_front)
+            front_frame = draw_strings(front_frame, string_points)
+            front_frame = draw_target_note(front_frame, instrument_front.keypoints, piece.current_note, string_points, violin_strings)
             front_frame = draw_hand_points(front_frame, front_hand_keypoints)
 
             cv2.imshow("Front Frame", front_frame)
@@ -253,13 +291,13 @@ def main():
             # play notes
             play_notes(violin, string_note_midis)
 
-            # maybe here, method to check if playing note is the current target note. if so, go to next note
-            # for drawing: midi -> freq -> fraction
+            # change piece note if correctly played
             if piece.current_note and piece.current_note.midi_note in string_note_midis:
-                next_note = piece.next_note()
-                print("CURRENT NOTE SWITCHED TO ", next_note.midi_note)
+                print("SUCCESSFULLY PLAYED NOTE", InstrumentString.midi_to_note_name(piece.current_note.midi_note))
+                piece.next_note()
+                print("CURRENT NOTE SWITCHED TO", InstrumentString.midi_to_note_name(piece.current_note.midi_note))
 
-            print(f'Notes played: {string_note_midis}')
+            # print(f'Notes played: {string_note_midis}')
 
         else:
             # remove all notes if missing keypoints

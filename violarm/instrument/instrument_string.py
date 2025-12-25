@@ -2,7 +2,7 @@ import math
 
 class InstrumentString:
     
-    def __init__(self, min_freq: float, max_freq=2637, string_length=0.325, equal_tuning=False):
+    def __init__(self, min_freq: float, max_freq=2637, string_length=0.325, equal_tuning=False, name=None):
         self.min_freq = min_freq
         self.max_freq = max_freq
         if self.max_freq <= self.min_freq:
@@ -12,6 +12,8 @@ class InstrumentString:
         self.velocity = min_freq * 2 * string_length
 
         self.equal_tuning = equal_tuning
+
+        self.name = name
 
 
     @staticmethod
