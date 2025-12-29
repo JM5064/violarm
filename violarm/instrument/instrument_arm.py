@@ -1,11 +1,12 @@
-from abc import ABC
 import numpy as np
+from keypoint_state import KeypointState
+from keypoint_buffer import KeypointBuffer
 
-class InstrumentArm(ABC):
+class InstrumentArm(KeypointState):
 
-    def __init__(self, keypoints):
-        self.keypoints = keypoints
-        self.recent_keypoints = []
+    def __init__(self, keypoint_buffer: KeypointBuffer):
+        super().__init__(keypoint_buffer)
+        self.keypoints = []
 
 
     def distance(self, p1, p2):
@@ -64,53 +65,4 @@ class InstrumentArm(ABC):
 
         return abs(quadrilateral_area - point_triangle_sum) < 0.1
     
-
-    def set_keypoints(self, keypoints):
-        self.keypoints = keypoints
-
-
-    def add_to_recent_keypoints(self, keypoints, limit):
-        """Adds keypoints to a list of recent keypoints, up to a limit
-        args:
-            keypoints: list[] of [x, y] arm keypoints
-            limit: max length of recent_keypoints list
-
-        returns:
-            None
-        """
-
-        if keypoints is None or len(keypoints) == 0:
-            return
         
-        if len(self.recent_keypoints) >= limit:
-            self.recent_keypoints.pop(0)
-
-        self.recent_keypoints.append(keypoints)
-
-
-    def get_average_keypoint_positions(self, current_keypoints):
-        """Returns the average keypoint positions in recent_keypoints
-        args:
-            current_keypoints: list[] of [x, y] arm keypoints for when no arm is detected
-
-        returns:
-            list[] of [x, y] arm keypoints (average over recent_keypoints)
-        """
-
-        if current_keypoints is None or len(current_keypoints) == 0:
-            return []
-        
-        if len(self.recent_keypoints) == 0:
-            return self.keypoints
-
-        average_keypoints = np.zeros((len(current_keypoints), 2))
-
-        for keypoints in self.recent_keypoints:
-            for i in range(len(keypoints)):
-                average_keypoints[i] += list(keypoints[i])
-
-        average_keypoints /= len(self.recent_keypoints)
-    
-        return average_keypoints.tolist()
-    
-

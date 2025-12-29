@@ -4,8 +4,8 @@ import numpy as np
 
 class InstrumentFront(InstrumentArm):
 
-    def __init__(self, keypoints, fingerboard_extension_multiplier=1):
-        super().__init__(keypoints)
+    def __init__(self, keypoint_buffer, fingerboard_extension_multiplier=1):
+        super().__init__(keypoint_buffer)
         self.fingerboard_extension_multiplier = fingerboard_extension_multiplier
 
 

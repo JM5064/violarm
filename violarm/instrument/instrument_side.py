@@ -1,10 +1,10 @@
 from instrument.instrument_arm import InstrumentArm
-import numpy as np
+# import numpy as np
 
 
 class InstrumentSide(InstrumentArm):
-    def __init__(self, keypoints, distance_threshold):
-        super().__init__(keypoints)
+    def __init__(self, keypoint_buffer, distance_threshold):
+        super().__init__(keypoint_buffer)
         self.distance_threshold = distance_threshold
 
 
@@ -43,6 +43,4 @@ class InstrumentSide(InstrumentArm):
         dist = self.distance_to_line(finger, top_right, bottom_right)
 
         return dist <= threshold
-
-
 

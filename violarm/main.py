@@ -10,10 +10,12 @@ import time
 import video
 from drawing import draw_arm_outline, draw_hand_points, draw_strings, draw_frets, draw_target_note
 from piece.piece_loader import PieceLoader 
+from keypoint_buffer import KeypointBuffer
 from instrument.instrument import Instrument
 from instrument.instrument_string import InstrumentString
 from instrument.instrument_front import InstrumentFront
 from instrument.instrument_side import InstrumentSide
+from instrument.instrument_hand import InstrumentHand
 
 
 def load_model():
@@ -210,8 +212,11 @@ def main():
     url = f"http://{ip}:{port}/video"
     side_cap = video.Video(url)
 
-    instrument_side = InstrumentSide(None, 20)
-    instrument_front = InstrumentFront(None, 1.39)
+    instrument_front = InstrumentFront(KeypointBuffer(5), fingerboard_extension_multiplier=1.4)
+    instrument_side = InstrumentSide(KeypointBuffer(5), distance_threshold=20)
+
+    instrument_hand_front = InstrumentHand(KeypointBuffer(3))
+    instrument_hand_side = InstrumentHand(KeypointBuffer(3))
 
     g_string = InstrumentString(196, 784, name="G")
     d_string = InstrumentString(293, 1175, name="D")
@@ -244,19 +249,21 @@ def main():
             front_arm_keypoints, front_hand_keypoints = process_frame(model, hands_front, front_frame)
 
             # Add to recent keypoints pool and use average set of keypoints
-            instrument_front.add_to_recent_keypoints(front_arm_keypoints, 5)
-            average_keypoints = instrument_front.get_average_keypoint_positions(front_arm_keypoints)
-            instrument_front.set_keypoints(average_keypoints)
+            average_arm_keypoints = instrument_front.get_average_keypoint_positions(front_arm_keypoints)
+            instrument_front.set_keypoints(average_arm_keypoints)
+
+            average_hand_keypoints = instrument_hand_front.get_average_keypoint_positions(front_hand_keypoints)
+            instrument_hand_front.set_keypoints(average_hand_keypoints)
 
             # Calculate string points
-            string_points = calculate_string_points(average_keypoints, violin.num_strings, instrument_front)
+            string_points = calculate_string_points(average_arm_keypoints, violin.num_strings, instrument_front)
 
             # Draw overlays
             front_frame = draw_frets(front_frame, instrument_front.keypoints, fret_fractions)
-            front_frame = draw_arm_outline(front_frame, average_keypoints)
+            front_frame = draw_arm_outline(front_frame, average_arm_keypoints)
             front_frame = draw_strings(front_frame, string_points)
             front_frame = draw_target_note(front_frame, instrument_front.keypoints, piece.current_note, string_points, violin_strings)
-            front_frame = draw_hand_points(front_frame, front_hand_keypoints)
+            front_frame = draw_hand_points(front_frame, instrument_hand_front.keypoints)
 
             cv2.imshow("Front Frame", front_frame)
 
@@ -272,12 +279,14 @@ def main():
             side_arm_keypoints, side_hand_keypoints = process_frame(model, hands_side, side_frame)
 
             # Add to recent keypoints pool and use average set of keypoints
-            instrument_side.add_to_recent_keypoints(side_arm_keypoints, 3)
-            average_keypoints = instrument_side.get_average_keypoint_positions(side_arm_keypoints)
-            instrument_side.set_keypoints(average_keypoints)
+            average_arm_keypoints = instrument_side.get_average_keypoint_positions(side_arm_keypoints)
+            instrument_side.set_keypoints(average_arm_keypoints)
 
-            side_frame = draw_arm_outline(side_frame, side_arm_keypoints)
-            side_frame = draw_hand_points(side_frame, side_hand_keypoints)
+            average_hand_keypoints = instrument_hand_side.get_average_keypoint_positions(side_hand_keypoints)
+            instrument_hand_side.set_keypoints(average_hand_keypoints)
+
+            side_frame = draw_arm_outline(side_frame, instrument_side.keypoints)
+            side_frame = draw_hand_points(side_frame, instrument_hand_side.keypoints)
 
             cv2.imshow("Side Frame", side_frame)
 
