@@ -201,16 +201,11 @@ def calculate_string_points(arm_keypoints, num_strings: int, instrument_front: I
 
 
 def main():
-    load_dotenv()
-
     model = load_model()
     hands_front, hands_side = initialize_mediapipe_hands(2)
 
     front_cap = video.Video(0)
-    ip = os.environ.get('IP')
-    port = os.environ.get('PORT')
-    url = f"http://{ip}:{port}/video"
-    side_cap = video.Video(url)
+    side_cap = video.Video(1)
 
     instrument_front = InstrumentFront(KeypointBuffer(5), fingerboard_extension_multiplier=1.4)
     instrument_side = InstrumentSide(KeypointBuffer(5), distance_threshold=20)
