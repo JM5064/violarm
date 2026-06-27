@@ -1,6 +1,9 @@
 # Violarm
 Violarm is a real-time virtual violin, played by tapping notes on the arm.
 
+![Alt text](.github/violarm.png)
+
+
 ## Overview
 
 Violarm uses a dual-camera setup: a "Front" webcam and a "Side" external camera.
@@ -13,4 +16,8 @@ Violarm uses a dual-camera setup: a "Front" webcam and a "Side" external camera.
     - Positioned perpendicular to the player on the right
     - Determine whether fingers are pressing the fingerboard
 
-![Alt text](.github/violarm.png)
+---
+
+**Ode to Joy Performance:**
+
+https://github.com/user-attachments/assets/03ee2a72-3b4f-4d37-8bd1-3d62c2163463
